@@ -54,6 +54,6 @@ def run_one(spec):
             raise ValueError(p)
         r = simulate(pol, jobs, spec["t0"], TRUTH, CUBES[spec["cube"]], mig)
     out = {k: v for k, v in spec.items()}
-    out.update({k: float(v) for k, v in r.items()})
+    out.update({k: float(v) for k, v in r.items() if not isinstance(v, list)})
     out["week"] = str(IDX[spec["t0"]].date())
     return out
