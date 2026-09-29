@@ -17,10 +17,12 @@ forecasts"*, prepared for **Sustainable Operations and Computers** (KeAi).
 | `src/experiment.py` | Experiment harness (forecast cubes, weeks, policy factory) |
 | `src/tune.py`, `src/select_config.py` | Hyperparameter tuning on 2023-Q4 validation weeks |
 | `src/run_test.py` | Out-of-sample evaluation on the 52 weeks of 2024 and sensitivity analyses |
-| `src/evaluate_forecasts.py`, `src/fig_data.py`, `src/analysis.py` | Tables, statistics and figures |
+| `src/robustness.py` | Controlled prediction-error experiments (graceful degradation, Theorem 2) |
+| `src/fairness.py`, `src/fairness_analysis.py` | Pooling game among sites: coalition values, dual (core) carbon attribution, stability checks (Theorem 3) |
+| `src/evaluate_forecasts.py`, `src/fig_data.py`, `src/analysis.py`, `src/fig_theory.py` | Tables, statistics and figures |
 | `results/` | All raw experiment outputs (CSV/JSON) and summary tables |
 | `figures/` | Figures used in the manuscript (PDF) |
-| `manuscript/` | Elsevier `elsarticle` LaTeX source, bibliography, highlights and compiled PDF |
+| `manuscript/` | Elsevier `elsarticle` LaTeX source (theory in `sec_theory.tex`, proofs in `appendix_proofs.tex`), bibliography, highlights and compiled PDF |
 
 ## Reproducing
 
@@ -35,11 +37,13 @@ python tune.py 2 1.0 12         # tuning stage 2 (carbon cost view) for the stag
 python select_config.py         # writes results/carma_config.json
 python run_test.py main         # 2024 test: 6 scenarios x 52 weeks x 10 policies
 python run_test.py sens         # sensitivity analyses
-python fig_data.py && python analysis.py
+python robustness.py            # prediction-error sweeps
+python fairness.py && python fairness_analysis.py   # carbon-attribution game
+python fig_data.py && python analysis.py && python fig_theory.py
 cd ../manuscript && pdflatex main && bibtex main && pdflatex main && pdflatex main
 ```
 
-The full pipeline runs in about two hours on four CPU cores. All random seeds are fixed.
+The full pipeline runs in about two and a half hours on four CPU cores. All random seeds are fixed.
 
 ## Data licence
 

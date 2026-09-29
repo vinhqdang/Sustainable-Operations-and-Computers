@@ -281,7 +281,8 @@ def simulate(policy, jobs, t0, truth, cube, migrate=True):
         miss = ids[(jobs["d"][ids] == t + 1) & (rem[ids] > DONE_TOL)]
         late_j[miss] = rem[miss]
     ev = jobs["ev"]; total = jobs["w"][ev].sum()
-    return dict(emis_t=emis_j[ev].sum() / 1e6, late_frac=late_j[ev].sum() / total,
+    by_o = [float(emis_j[ev & (jobs["o"] == o)].sum() / 1e6) for o in range(S)]
+    return dict(emis_by_origin=by_o, emis_t=emis_j[ev].sum() / 1e6, late_frac=late_j[ev].sum() / total,
                 late_jobs=float((late_j[ev] > DONE_TOL).mean()),
                 unfinished=float(rem[ev].sum()) / total, mig_frac=mig_j[ev].sum() / total,
                 work=total, jobs=int(ev.sum()), ms_per_decision=1e3 * wall / max(n_dec, 1))
@@ -365,3 +366,49 @@ def solve_general(rem, width, orig, rel, dl, cost, cap, n_real, ghost_pen=None):
     x0 = np.zeros((n_real, S)); f = (hh == 0) & (jj < n_real)
     np.add.at(x0, (jj[f], ss[f]), x[f])
     return x0
+
+
+# --------------------------------------------------------------------------
+# Hindsight LP with duals (cooperative carbon attribution, Section 3.6)
+# --------------------------------------------------------------------------
+def hindsight_lp(jobs, t0, truth, coalition=None, migrate=True):
+    """Offline LP (2)-(5) for the sites in `coalition` (jobs originating there,
+    capacity of those sites only). Returns value (tCO2, evaluated jobs only when
+    coalition is the grand coalition) and the per-site dual attribution phi[o]."""
+    import scipy.sparse as sp
+    from scipy.optimize import linprog
+    coalition = list(range(S)) if coalition is None else list(coalition)
+    inS = np.isin(np.arange(S), coalition)
+    tf = int(jobs["a"].min()); L = int(jobs["d"].max()) - tf
+    ct = unit_cost(truth[tf:tf + L], migrate)
+    cap = capacity(np.arange(tf, tf + L)) * inS[None, :]
+    J = jobs["n"]
+    w = np.where(inS[jobs["o"]], jobs["w"], 0.0)
+    m = np.where(inS[jobs["o"]], jobs["m"], 0.0)
+    a = jobs["a"] - tf; win = jobs["d"] - jobs["a"]
+    jj = np.repeat(np.arange(J), win * S)
+    hh = np.concatenate([np.repeat(a[j] + np.arange(win[j]), S) for j in range(J)])
+    ss = np.tile(np.arange(S), win.sum())
+    nv = len(jj)
+    c = np.minimum(ct[hh, jobs["o"][jj], ss], 1e6)
+    cobj = np.r_[c, np.full(J, BIG)]
+    Aeq = sp.csr_matrix((np.ones(nv + J), (np.r_[jj, np.arange(J)], np.arange(nv + J))), shape=(J, nv + J))
+    A1 = sp.csr_matrix((np.ones(nv), (hh * S + ss, np.arange(nv))), shape=(L * S, nv + J))
+    jh = np.r_[0, np.cumsum(win)][jj] + (hh - a[jj])
+    A2 = sp.csr_matrix((np.ones(nv), (jh, np.arange(nv))), shape=(int(win.sum()), nv + J))
+    b1 = cap.ravel(); b2 = m[np.repeat(np.arange(J), win)]
+    res = linprog(cobj, A_ub=sp.vstack([A1, A2]).tocsr(), b_ub=np.r_[b1, b2], A_eq=Aeq, b_eq=w,
+                  bounds=(0, None), method="highs")
+    if res.status != 0:
+        raise RuntimeError(res.message)
+    lam = res.eqlin.marginals                      # work duals (free)
+    mu = res.ineqlin.marginals[:L * S].reshape(L, S)  # capacity duals (<= 0)
+    nu = res.ineqlin.marginals[L * S:]             # width duals (<= 0)
+    nu_job = np.zeros(J); np.add.at(nu_job, np.repeat(np.arange(J), win), nu)
+    phi = np.zeros(S)
+    for o in coalition:
+        sel = jobs["o"] == o
+        phi[o] = (w[sel] * lam[sel]).sum() + (m[sel] * nu_job[sel]).sum() + (cap[:, o] * mu[:, o]).sum()
+    x = res.x[:nv]
+    phys = np.array([(x * c)[jobs["o"][jj] == o].sum() for o in range(S)])
+    return dict(value=res.fun / 1e6, phi=phi / 1e6, phys=phys / 1e6)

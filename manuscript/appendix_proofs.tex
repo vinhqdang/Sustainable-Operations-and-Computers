@@ -1,0 +1,48 @@
+\section{Proofs}\label{app:proofs}
+
+\paragraph{Atoms} Splitting a job $j$ into sub-jobs $j_1,\dots,j_k$ with work $w_{j_i}$ and widths $m_{j_i}=m_jw_{j_i}/w_j$ does not change the optimal value of any planning problem. Given a solution for the merged job, the allocation $x_{j_i s}(t)=x_{js}(t)\,w_{j_i}/w_j$ satisfies every constraint of the split problem at the same cost. Conversely, summing the sub-job allocations gives a feasible allocation for the merged job, because $\sum_i m_{j_i}=m_j$. Splitting also preserves window-feasibility, since $w_{j_i}/m_{j_i}=w_j/m_j$. We may therefore compare true and predicted job sets atom by atom.
+
+\subsection{Proof of Theorem~\ref{thm:lb}}
+
+Normalise $L=1$, so $U=\theta$. Site $A$ has one server with cost $p\in[1,\theta]$ in hour 0 and cost 1 in hour 1. Site $B$ has ample capacity at cost $\theta$ in both hours. Transfer costs are zero. A flexible job ($w=m=1$, window $\{0,1\}$) is released at $t=0$. The adversary either releases nothing more (scenario 1) or releases an urgent job ($w=m=1$, window $\{1\}$) at $t=1$ (scenario 2). All costs are known in advance.
+
+Consider any deterministic online algorithm that may split work fractionally, and let $x\in[0,1]$ be the amount of flexible work it runs at $t=0$. Running at $B$ in hour 0 costs $\theta\ge p$ and is dominated, so we may assume this work runs at $A$. In scenario 1 the algorithm finishes the remaining $1-x$ at $A$ in hour 1, so $\mathrm{ALG}_1=xp+(1-x)$, while $\mathrm{OPT}_1=1$. In scenario 2, hour 1 must process $2-x$ units and $A$ can take only one of them, so $\mathrm{ALG}_2=xp+1+(1-x)\theta$, while $\mathrm{OPT}_2=p+1$. The ratio $r_1(x)=1+x(p-1)$ increases in $x$, and the ratio $r_2(x)=\big(1+\theta-x(\theta-p)\big)/(p+1)$ decreases in $x$. Hence $\min_x\max\{r_1,r_2\}$ is attained where they are equal, at $x^*=(\theta-p)/(p^2-p-1+\theta)\in[0,1]$, and its value is
+\[
+1+\frac{(p-1)(\theta-p)}{p^2-p-1+\theta}.
+\]
+The adversary chooses $p$ to maximise this value, which gives $R^*(\theta)$. The choice $p=\sqrt\theta$ gives the stated closed-form lower bound. For a randomised algorithm, the expected cost in each scenario is affine in $x$, so it equals the cost of the deterministic fractional algorithm that plays $\mathbb{E}[x]$, and the bound applies against an oblivious adversary. Myopic MPC sees only the flexible job at $t=0$ and defers it entirely to the cheaper hour 1 ($x=0$). With $p\to 1^+$, its ratio in scenario 2 tends to $(1+\theta)/2$. \hfill$\square$
+
+\subsection{Proof of Theorem~\ref{thm:carma}}
+
+\paragraph{Robustness} We first show by induction that every pending real job $j$ is window-feasible at the start of every hour: its remaining work satisfies $r_j\le m_j(d_j-t)$. This holds at release by (A1). Suppose it holds at hour $t$, and suppose the plan of CARMA leaves some real work $u_j>0$ unfinished. Because $r_j\le m_j(d_j-t)$, some hour $\tau\in[t,d_j)$ carries less than $m_j$ units of job $j$ in the plan. Moving a small amount of $u_j$ to the backstop in hour $\tau$ keeps the plan feasible, because the backstop has unlimited capacity, and it changes the cost by a negative amount, because the backstop costs at most $U<\Pi$. This contradicts optimality, so the plan completes all real work. After the first hour is executed, the rest of the plan is a feasible completion, so $r_j'\le m_j(d_j-t-1)$ and the induction step holds. No real job is ever late. Every executed server-hour costs at most $U$, so $\mathrm{ALG}\le U\,W$, where $W$ is the total work. Every server-hour in the oracle's solution costs at least $L$, and slack costs $\Pi>U\ge L$, so $\mathrm{OPT}\ge LW$. Hence $\mathrm{ALG}\le\theta\,\mathrm{OPT}$.
+
+\paragraph{Telescoping} Let $\sigma_t$ be the state at the start of hour $t$: the remaining work of all real jobs released by $t$. Let $V_t(\sigma,G;c)$ be the optimal value of (\ref{eq:obj})--(\ref{eq:cap}) over hours $t,\dots,T-1$ for the pending jobs $\sigma$ and the future jobs $G$ under costs $c$. Write $\bar V_t=V_t(\sigma_t,F_t;c)$, so that $\bar V_0=\mathrm{OPT}$ and $\bar V_T=0$. For a feasible hour-$t$ allocation $x$ with cost $g_t(x)$ and successor state $\sigma^+(x)$, define
+\[
+Q_t(x)=g_t(x)+V_{t+1}\big(\sigma^+(x),F_t;c\big),\qquad \hat Q_t(x)=g_t(x)+V_{t+1}\big(\sigma^+(x),\hat F_t;\hat c_t\big).
+\]
+By dynamic programming over a deterministic future, $\min_xQ_t(x)=\bar V_t$, and $Q_t(x_t)=g_t(x_t)+\bar V_{t+1}$ for the executed action $x_t$. Summing over $t$ gives
+\[
+\mathrm{ALG}-\mathrm{OPT}=\sum_{t=0}^{T-1}\delta_t,\qquad \delta_t=Q_t(x_t)-\min_xQ_t(x)\ge 0.
+\]
+Ghost jobs are released at $t+1$ or later, the planning window reaches $T$ by (A2), and hour-$t$ costs are observed. The planning problem solved by CARMA at hour $t$ is therefore exactly $\min_x\hat Q_t(x)$, and $x_t$ is a minimiser.
+
+\paragraph{One-step loss} Let $x^*\in\arg\min Q_t$. Since $\hat Q_t(x_t)\le\hat Q_t(x^*)$, we have $\delta_t\le\Delta(x_t)-\Delta(x^*)$, where $\Delta=Q_t-\hat Q_t$. Write $\Delta=D_1+D_2$ with
+\begin{align*}
+D_1(x)&=V_{t+1}(\sigma^+(x),F_t;c)-V_{t+1}(\sigma^+(x),\hat F_t;c),\\
+D_2(x)&=V_{t+1}(\sigma^+(x),\hat F_t;c)-V_{t+1}(\sigma^+(x),\hat F_t;\hat c_t).
+\end{align*}
+\emph{Cost error.} An optimal solution under $\hat c_t$ is feasible under $c$, and its cost changes by at most $\varepsilon_t$ per unit of flow on future-hour arcs. The same holds with the roles of $c$ and $\hat c_t$ exchanged. Hence $|D_2(x)|\le\varepsilon_tW_t$ for all $x$, and $D_2(x_t)-D_2(x^*)\le 2\varepsilon_tW_t$.
+
+\emph{Demand error.} Under (A1), the penalty attached to a window-feasible job does not affect any optimal value, provided it is at least $U$. If a solution leaves slack on such a job, the argument used for robustness moves that slack to the backstop at no greater cost. True future jobs (penalty $\Pi$) and ghost jobs (penalty $\Pi_g$) can therefore be treated as identical atoms whenever they coincide. Let $a$ be a window-feasible atom and $G$ any set of future jobs. For every state $\sigma$,
+\[
+Lw_a\;\le\;V(\sigma,G\cup\{a\})-V(\sigma,G)\;\le\;Uw_a.
+\]
+For the upper bound, add $a$ to an optimal solution for $G$ by running it on the backstop at rate $w_a/(d_a-a_a)\le m_a$ in every hour of its window. For the lower bound, delete $a$'s flow and slack from an optimal solution for $G\cup\{a\}$; each deleted unit cost at least $\min\{L,\Pi_a\}=L$, since $\Pi_a\ge U\ge L$. Now transform $\hat F_t$ into $F_t$ by removing $\hat F_t\setminus F_t$ and adding $F_t\setminus\hat F_t$, one atom at a time. Then $D_1(x)$ is a sum of increments, each lying in $[Lw_a,Uw_a]$ (with a minus sign for removals) for every $x$. Therefore $D_1(x_t)-D_1(x^*)\le(U-L)\sum_aw_a=(U-L)\,d_t$.
+
+Combining the two bounds gives $\delta_t\le(U-L)d_t+2\varepsilon_tW_t$. Summing over $t$ and taking the minimum with the robustness bound proves (\ref{eq:smooth}). If $d_t=\varepsilon_t=0$ for all $t$, then $\delta_t=0$ and $\mathrm{ALG}=\mathrm{OPT}$. \hfill$\square$
+
+\subsection{Proof of Theorem~\ref{thm:core}}
+
+Write the problem of coalition $C$ as $c(C)=\min\{c^\top z: A_{=}z=b_{=}(C),\ A_{\le}z\le b_{\le}(C),\ z\ge 0\}$, where $z=(x,u)$. Jobs submitted outside $C$ have zero work and zero width, and sites outside $C$ have zero capacity. This forces the corresponding flows to zero, so the problem coincides with the stand-alone problem of $C$. The right-hand side is additive over sites: $b(C)=\sum_{o\in C}b^o$, where $b^o$ collects the work and widths of the jobs submitted at $o$ and the capacity of site $o$. The matrix $A$ and the cost $c$ do not depend on $C$. The dual problem $\max\{b(C)^\top y: A^\top y\le c,\ y_{\le}\le 0\}$ therefore has a feasible set that is the same for all coalitions.
+
+Let $y^*=(\lambda,\nu,\mu)$ be an optimal dual solution for $\mathcal S$. The slack variables make every primal problem feasible, and costs are non-negative, so strong duality gives $c(\mathcal S)=b(\mathcal S)^\top y^*=\sum_o(b^o)^\top y^*=\sum_o\phi_o$, which is budget balance. For any coalition $C$, $y^*$ is dual-feasible for $C$, so weak duality gives $c(C)\ge b(C)^\top y^*=\sum_{o\in C}\phi_o$, which is the core condition~\cite{owen1975core}. Expanding $(b^o)^\top y^*$ gives (\ref{eq:phi}). By Proposition~\ref{prop:flow} the problem is a min-cost flow. Its optimal node potentials, together with the reduced costs they induce on saturated capacity arcs, give an optimal dual solution, so network simplex returns $y^*$ together with the optimal flow. \hfill$\square$

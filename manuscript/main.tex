@@ -8,6 +8,7 @@
 \usepackage{xcolor}
 
 \newtheorem{proposition}{Proposition}
+\newtheorem{theorem}{Theorem}
 \makeatletter
 \newcommand{\inputtable}[1]{\@@input #1 }
 \makeatother
@@ -27,7 +28,7 @@
             country={Vietnam}}
 
 \begin{abstract}
-Shifting deferrable computing jobs to cleaner hours and locations cuts data-centre emissions, but online schedulers must act before future grid conditions and jobs are known. This paper formulates multi-site, deadline-constrained scheduling of bag-of-tasks jobs, including data-transfer emissions, as a minimum-cost flow problem. This yields exact offline optima and fast online planning, and it is proved that myopic receding-horizon scheduling can be arbitrarily worse than the offline optimum even with perfect carbon forecasts. The paper then proposes CARMA (Carbon-aware Anticipatory Receding-horizon Multi-site Allocation), which adds ``ghost jobs'' for expected arrivals, learned from job history, to each hourly plan. CARMA is paired with a 1--24-hour carbon-intensity forecaster that combines direct gradient-boosted models with normalised conformal calibration and adaptive conformal inference. The methods are evaluated on three years of regional grid data for Great Britain with four sites and 52 out-of-sample weeks in 2024. The forecaster reduces mean absolute error by about 23\% relative to persistence at horizons of 1--6 hours and keeps its upper bounds calibrated despite decarbonisation drift. With migration allowed, CARMA reduces emissions by 36--68\% relative to carbon-agnostic operation, comes within 5.8--8.7\% of the clairvoyant optimum (against 17.6--21.5\% for myopic receding-horizon control), and lowers late work under heavy load. Anticipating demand is worth 10--13 percentage points of optimality gap, while perfect carbon foresight is worth 1--3 points to a myopic planner. Risk-averse conformal carbon pricing helps myopic planners but not CARMA. Without migration, reductions are smaller (9--18\% at the optimum) and forecast accuracy becomes the binding constraint.
+Shifting deferrable jobs to cleaner hours and locations cuts data-centre emissions, but online schedulers must act before future grid conditions and jobs are known. This paper formulates multi-site, deadline-constrained scheduling of bag-of-tasks jobs as a minimum-cost flow problem and proposes CARMA (Carbon-aware Anticipatory Receding-horizon Multi-site Allocation). CARMA adds ``ghost jobs'' for expected arrivals to each hourly plan and uses a 1--24-hour carbon-intensity forecaster with adaptive conformal calibration. Three guarantees are proved. First, uncertainty about demand forces any online algorithm, even one with perfect carbon forecasts, to a competitive ratio of order $\sqrt{\theta}$, where $\theta$ is the ratio of the highest to the lowest unit emission; myopic planning is worse, at $(1+\theta)/2$. Second, given backstop capacity, CARMA never misses a deadline and is $\theta$-competitive under any predictions, is optimal under exact predictions, and degrades linearly with prediction error. Third, dual prices of the pooled problem yield a carbon attribution among sites that lies in the core, so no coalition gains by leaving. On three years of regional grid data for Great Britain, with 52 out-of-sample weeks in 2024, CARMA reduces emissions by 36--68\% relative to carbon-agnostic operation when migration is allowed. It comes within 5.8--8.7\% of the clairvoyant optimum, against 17.6--21.5\% for myopic control, and lowers late work. Anticipating demand is worth more than perfect carbon foresight, and CARMA degrades gracefully under injected errors. Location-based carbon accounting violates coalitional stability in every test week, whereas the dual attribution satisfies it exactly in hindsight and in over 99\% of checks online.
 \end{abstract}
 
 \begin{keyword}
@@ -40,6 +41,7 @@ Carbon-aware computing \sep Data centre scheduling \sep Model predictive control
 
 \input{sec_intro.tex}
 \input{sec_methods.tex}
+\input{sec_theory.tex}
 \input{sec_results.tex}
 \input{sec_discussion.tex}
 
@@ -54,6 +56,9 @@ This research did not receive any specific grant from funding agencies in the pu
 
 \section*{Data availability}
 The carbon-intensity data are publicly available from the NESO Carbon Intensity API~\cite{nesoapi} under the CC BY 4.0 licence. The data snapshot used in this study, all code, the workload generator with fixed random seeds, and all raw experiment outputs are available from the author's repository (\url{https://github.com/vinhqdang/Sustainable-Operations-and-Computers}).
+
+\appendix
+\input{appendix_proofs.tex}
 
 \bibliographystyle{elsarticle-num}
 \bibliography{references}
