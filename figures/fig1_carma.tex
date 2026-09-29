@@ -1,43 +1,58 @@
-\documentclass[tikz,border=4pt]{standalone}
-\usepackage{amsmath}
-\usetikzlibrary{positioning,arrows.meta}
+\documentclass[border=3pt]{standalone}
+\usepackage{mathptmx}
+\usepackage{tikz}
+\usetikzlibrary{positioning,arrows.meta,fit,calc}
 \begin{document}
-\sffamily\footnotesize
+\small\hyphenpenalty=10000\exhyphenpenalty=10000
 \begin{tikzpicture}[
-  box/.style={draw,rounded corners=2pt,align=center,minimum height=1.0cm,text width=2.75cm,inner sep=3pt},
-  arr/.style={-{Stealth[length=2mm]},thick}]
-\node[box,fill=orange!10] (api) at (0,0) {NESO regional\\carbon-intensity feed};
-\node[box,fill=orange!10] (gbm) at (3.4,0) {Direct GBM forecasts\\$\hat I_s(t{+}h\,|\,t)$, $h\le 24$};
-\node[box,fill=orange!10] (cp) at (6.8,0) {Cost view: $\hat I$ or\\conformal $U^\beta$ (ACI)};
-\node[box,fill=blue!8] (jobs) at (6.8,-1.6) {Pending real jobs\\$(w_j,m_j,o_j,d_j)$};
-\node[box,fill=blue!8] (hist) at (0,-3.2) {Operator job history};
-\node[box,fill=blue!8] (prof) at (3.4,-3.2) {Demand profile\\$\bar W_{\tau ob},\ \bar M_{\tau ob}$};
-\node[box,fill=blue!8] (ghost) at (6.8,-3.2) {Ghost jobs, hours\\$t{+}1..t{+}\ell$, weight $\kappa$};
-\node[draw,rounded corners=2pt,fill=green!6,minimum width=3.6cm,minimum height=4.2cm] (mcf) at (11.0,-1.6) {};
-\node[align=center] at (11.0,-0.05) {\textbf{Planning network}\\min-cost flow (Prop.~1)};
-\begin{scope}[shift={(11.0,-2.0)},scale=0.62]
-\node[circle,draw,inner sep=1.2pt] (s) at (-2.5,0) {};
-\foreach \y/\n in {1.1/a,0.1/b,-1.1/c}{\node[circle,draw,inner sep=1.2pt] (j\n) at (-1.3,\y) {};}
-\node[circle,draw,dashed,inner sep=1.2pt] (jg) at (-1.3,-1.9) {};
-\foreach \y/\n in {1.3/a,0.5/b,-0.3/c,-1.1/d,-1.9/e}{\node[circle,draw,inner sep=1.2pt] (h\n) at (0.2,\y) {};}
-\foreach \y/\n in {0.7/a,-0.9/b}{\node[circle,draw,inner sep=1.2pt,fill=green!40] (k\n) at (1.5,\y) {};}
-\node[circle,draw,inner sep=1.2pt] (t) at (2.6,-0.1) {};
-\foreach \n in {a,b,c,g}{\draw[->,thin] (s)--(j\n);}
-\draw[->,thin] (ja)--(ha); \draw[->,thin] (ja)--(hb); \draw[->,thin] (jb)--(hb); \draw[->,thin] (jb)--(hc);
-\draw[->,thin] (jc)--(hd); \draw[->,thin,dashed] (jg)--(he);
-\foreach \n in {a,b,c,d,e}{\draw[->,thin,orange!80!black] (h\n)--(ka); \draw[->,thin,orange!80!black] (h\n)--(kb);}
-\draw[->,thin] (ka)--(t); \draw[->,thin] (kb)--(t);
-\node[font=\tiny] at (-2.5,-0.45) {src};\node[font=\tiny] at (-1.3,1.6) {job};
-\node[font=\tiny] at (0.2,1.8) {job-hour};\node[font=\tiny] at (1.5,1.2) {hour-site};
-\node[font=\tiny] at (2.6,-0.55) {sink};
+  blk/.style={draw,thin,minimum height=0.8cm,text width=2.9cm,align=center,inner sep=2pt},
+  frm/.style={draw,densely dashed,gray,inner sep=6pt},
+  lab/.style={font=\footnotesize\itshape,anchor=south west,inner sep=1pt},
+  ar/.style={-{Latex[length=1.6mm,width=1.2mm]},thin},
+  nd/.style={circle,draw,thin,fill=white,inner sep=0pt,minimum size=4.2pt}]
+% ---- forecasting module
+\node[blk] (feed) at (0,0) {Regional carbon-intensity data $I_s(t)$};
+\node[blk,below=0.45cm of feed] (gbm) {Direct GBM models, $h=1,\dots,24$};
+\node[blk,below=0.45cm of gbm] (cp) {Conformal calibration with ACI};
+\draw[ar] (feed)--(gbm); \draw[ar] (gbm)--(cp);
+\node[frm,fit=(feed)(cp)] (F1) {};
+\node[lab] at (F1.north west) {(a) Carbon forecasting};
+% ---- demand module
+\node[blk,below=1.25cm of cp] (hist) {Historical job traces};
+\node[blk,below=0.45cm of hist] (prof) {Demand profile $\bar W_{\tau ob},\,\bar M_{\tau ob}$};
+\draw[ar] (hist)--(prof);
+\node[frm,fit=(hist)(prof)] (F2) {};
+\node[lab] at (F2.north west) {(b) Demand anticipation};
+% ---- planning network
+\begin{scope}[shift={(8.25,-2.35)}]
+ \node[nd,label={[font=\footnotesize]left:source}] (s) at (-2.2,0) {};
+ \foreach \y/\n in {1.5/1,0.75/2,0/3}{\node[nd] (j\n) at (-1.1,\y) {};}
+ \foreach \y/\n in {-0.75/4,-1.5/5}{\node[nd,dashed] (j\n) at (-1.1,\y) {};}
+ \foreach \y/\n in {1.7/1,1.1/2,0.5/3,-0.1/4,-0.7/5,-1.3/6}{\node[nd] (h\n) at (0.2,\y) {};}
+ \foreach \y/\n in {0.8/1,0.0/2,-0.8/3}{\node[nd,fill=black] (k\n) at (1.5,\y) {};}
+ \node[nd,label={[font=\footnotesize]right:sink}] (t) at (2.5,0) {};
+ \foreach \n in {1,2,3}{\draw[thin] (s)--(j\n);}
+ \foreach \n in {4,5}{\draw[thin,dashed] (s)--(j\n);}
+ \draw[thin] (j1)--(h1) (j1)--(h2) (j2)--(h2) (j2)--(h3) (j3)--(h3) (j3)--(h4);
+ \draw[thin,dashed] (j4)--(h5) (j5)--(h6);
+ \foreach \a in {1,...,6}{\foreach \b in {1,2,3}{\draw[very thin,gray] (h\a)--(k\b);}}
+ \foreach \b in {1,2,3}{\draw[thin] (k\b)--(t);}
+ \draw[thin,dotted] (j3) to[bend right=55] (t);
+ \node[font=\footnotesize,align=center] at (-1.1,2.25) {jobs};
+ \node[font=\footnotesize,align=center] at (0.2,2.25) {job--hour};
+ \node[font=\footnotesize,align=center] at (1.5,2.25) {hour--site};
+ \node[font=\scriptsize,align=center] at (-0.45,-2.25) {real (solid) and ghost (dashed) jobs};
+ \node[font=\scriptsize,gray] at (0.85,-2.25) {};
 \end{scope}
-\node[draw,rounded corners=2pt,fill=gray!10,align=center,text width=3.4cm] (exec) at (11.0,-4.75) {Execute hour-$t$ plan of real jobs only; observe $I_s(t{+}1)$};
-\draw[arr] (api)--(gbm); \draw[arr] (gbm)--(cp);
-\draw[arr] (hist)--(prof); \draw[arr] (prof)--(ghost);
-\draw[arr] (cp.east)-- node[above=2pt,font=\scriptsize,pos=0.4]{costs} (mcf.west |- cp.east);
-\draw[arr] (jobs.east)--(mcf.west |- jobs.east);
-\draw[arr] (ghost.east)--(mcf.west |- ghost.east);
-\draw[arr] (mcf.south)--(exec.north);
-\draw[arr] (exec.west) -- node[below,font=\scriptsize]{roll forward $t\leftarrow t{+}1$ (and ACI update)} (-1.85,-4.75) |- (api.west);
+\node[frm,minimum width=6.2cm,minimum height=5.7cm] (F3) at (8.05,-2.3) {};
+\node[lab] at (F3.north west) {(c) Hourly min-cost flow (Proposition 1)};
+% ---- execution
+\node[blk,text width=4.2cm] (exe) at (8.05,-6.35) {Execute hour-$t$ allocation of real jobs; observe $I_s(t{+}1)$ and new arrivals};
+% ---- connections
+\draw[ar] (cp.east) -- node[above,font=\footnotesize,pos=0.5]{arc costs $\hat c_{os}(t{+}h)$} (cp.east -| F3.west);
+\draw[ar] (prof.east) -- node[above,font=\footnotesize,pos=0.45]{ghost jobs, weight $\kappa$} (prof.east -| F3.west);
+\draw[ar] (F3.south) -- (exe.north);
+\draw[ar] (exe.south) -- ++(0,-0.35) -| node[pos=0.75,left,font=\footnotesize]{$t\leftarrow t{+}1$} ([xshift=-0.55cm]F1.west) |- (feed.west);
+\draw[ar] ([xshift=-0.55cm]F2.west |- hist.west) -- (hist.west);
 \end{tikzpicture}
 \end{document}

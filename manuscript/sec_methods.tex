@@ -56,7 +56,7 @@ The mechanism in Proposition~\ref{prop:myopic} is common in practice. Low-carbon
 \begin{figure}[t]
 \centering
 \includegraphics[width=\textwidth]{../figures/fig1_carma.pdf}
-\caption{The CARMA decision loop. Every hour, carbon-intensity forecasts price the (job-hour)$\to$(hour-site) arcs, and pending real jobs and ghost jobs for expected arrivals (dashed) share the planning network. The min-cost flow is solved exactly, and only the first-hour allocation of real jobs is executed.}
+\caption{The CARMA decision loop. (a) Probabilistic carbon-intensity forecasts price the job--hour to hour--site arcs. (b) A demand profile learned from past traces generates ghost jobs for expected arrivals. (c) Real jobs (solid) and ghost jobs (dashed) share one min-cost flow network, whose dotted slack arc carries unfinished work to the sink at the lateness penalty. The network is solved exactly every hour, and only the first-hour allocation of real jobs is executed.}
 \label{fig:carma}
 \end{figure}
 
