@@ -216,3 +216,17 @@ __marimo__/
 
 # Streamlit
 .streamlit/secrets.toml
+
+# derived data caches (rebuilt by the pipeline)
+data/gb_hourly.pkl
+data/forecasts.pkl
+# LaTeX build files
+*.aux
+*.bbl
+*.blg
+*.log
+*.out
+*.spl
+*.fls
+*.fdb_latexmk
+*.synctex.gz

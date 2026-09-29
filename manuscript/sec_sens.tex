@@ -1,0 +1,24 @@
+Table~\ref{tab:sens} varies one factor at a time around the base case: spatio-temporal regime, $\rho=0.5$, $\upsilon=0.3$, $\eta=0.02$~kWh/GB. Each setting uses 26 alternating test weeks of 2024 with fresh workload seeds. CARMA keeps its hyperparameters from the base case. CARMA has the smallest gap of all online policies in every setting. Its weekly emissions are below MPC's in 155 of the 156 setting-weeks, and every comparison with a baseline is significant (all $p<10^{-7}$).
+
+\begin{table}[t]
+\centering
+\caption{Sensitivity analysis (spatio-temporal regime; 26 alternating weeks of 2024 per setting; base case $\rho=0.5$, $\upsilon=0.3$, $\eta=0.02$~kWh/GB). Oracle red.: emission reduction of the oracle relative to ASAP-Local (\%). Gap columns: excess over the oracle (\%). Wins: weeks in which CARMA emits less than MPC. Late: share of late work (\%), MPC / CARMA.}
+\label{tab:sens}
+\footnotesize
+\resizebox{\textwidth}{!}{%
+\begin{tabular}{lrrrrrrr}
+\toprule
+ & Oracle & \multicolumn{4}{c}{Gap to oracle (\%)} & Wins vs & Late (\%) \\
+\cmidrule(lr){3-6}
+Setting & red. & Greedy-Sp. & F.-Reserve & MPC & CARMA & MPC & MPC / CARMA \\
+\midrule
+\inputtable{../results/table_sens.tex}
+\bottomrule
+\end{tabular}}
+\end{table}
+
+\paragraph{Share of urgent jobs} The benefit of anticipation grows with the share of urgent work, because urgent arrivals are precisely the demand that myopic planners crowd out. With $\upsilon=0.5$, CARMA's gap is 5.8\% against 20.3\% for MPC, and it has no late work (MPC 0.15\%). With $\upsilon=0.1$, the gap is 10.4\% against 20.9\%. When almost all work is flexible, there is less urgent demand to protect capacity for.
+
+\paragraph{Network energy intensity} The ranking is unchanged over a twelve-fold range of transmission energy intensity. Cheaper transfers ($\eta=0.005$~kWh/GB) raise the oracle's reduction to 60.7\%, and CARMA's gap is 9.4\% against 25.0\% for MPC. Expensive transfers ($\eta=0.06$~kWh/GB) lower the oracle's reduction to 52.3\%, with gaps of 7.4\% and 18.1\%. The share of migrated work changes only modestly (49--51\% for CARMA), because the intensity difference between South Scotland and London is far larger than any plausible transfer overhead.
+
+\paragraph{Misspecified demand profile} CARMA's ghost jobs come from a profile learned at $\rho=0.5$. When the actual load is 20\% higher ($\rho=0.6$), so that CARMA under-anticipates, its gap is 6.9\% against 22.1\% for MPC, and its late share is 0.01\% against 0.34\%. When the actual load is 20\% lower ($\rho=0.4$), so that it over-anticipates, CARMA reserves more clean capacity than needed. Its gap rises to 10.8\%, but that is still half of MPC's 21.3\%, and CARMA wins in 25 of the 26 weeks. Anticipation is therefore robust to moderate errors in the demand profile in both directions. The operational safeguard is the softer penalty on ghost jobs: the planner never accepts lateness of real work in exchange for serving ghost demand.

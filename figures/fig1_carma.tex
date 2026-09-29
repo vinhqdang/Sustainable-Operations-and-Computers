@@ -1,0 +1,43 @@
+\documentclass[tikz,border=4pt]{standalone}
+\usepackage{amsmath}
+\usetikzlibrary{positioning,arrows.meta}
+\begin{document}
+\sffamily\footnotesize
+\begin{tikzpicture}[
+  box/.style={draw,rounded corners=2pt,align=center,minimum height=1.0cm,text width=2.75cm,inner sep=3pt},
+  arr/.style={-{Stealth[length=2mm]},thick}]
+\node[box,fill=orange!10] (api) at (0,0) {NESO regional\\carbon-intensity feed};
+\node[box,fill=orange!10] (gbm) at (3.4,0) {Direct GBM forecasts\\$\hat I_s(t{+}h\,|\,t)$, $h\le 24$};
+\node[box,fill=orange!10] (cp) at (6.8,0) {Cost view: $\hat I$ or\\conformal $U^\beta$ (ACI)};
+\node[box,fill=blue!8] (jobs) at (6.8,-1.6) {Pending real jobs\\$(w_j,m_j,o_j,d_j)$};
+\node[box,fill=blue!8] (hist) at (0,-3.2) {Operator job history};
+\node[box,fill=blue!8] (prof) at (3.4,-3.2) {Demand profile\\$\bar W_{\tau ob},\ \bar M_{\tau ob}$};
+\node[box,fill=blue!8] (ghost) at (6.8,-3.2) {Ghost jobs, hours\\$t{+}1..t{+}\ell$, weight $\kappa$};
+\node[draw,rounded corners=2pt,fill=green!6,minimum width=3.6cm,minimum height=4.2cm] (mcf) at (11.0,-1.6) {};
+\node[align=center] at (11.0,-0.05) {\textbf{Planning network}\\min-cost flow (Prop.~1)};
+\begin{scope}[shift={(11.0,-2.0)},scale=0.62]
+\node[circle,draw,inner sep=1.2pt] (s) at (-2.5,0) {};
+\foreach \y/\n in {1.1/a,0.1/b,-1.1/c}{\node[circle,draw,inner sep=1.2pt] (j\n) at (-1.3,\y) {};}
+\node[circle,draw,dashed,inner sep=1.2pt] (jg) at (-1.3,-1.9) {};
+\foreach \y/\n in {1.3/a,0.5/b,-0.3/c,-1.1/d,-1.9/e}{\node[circle,draw,inner sep=1.2pt] (h\n) at (0.2,\y) {};}
+\foreach \y/\n in {0.7/a,-0.9/b}{\node[circle,draw,inner sep=1.2pt,fill=green!40] (k\n) at (1.5,\y) {};}
+\node[circle,draw,inner sep=1.2pt] (t) at (2.6,-0.1) {};
+\foreach \n in {a,b,c,g}{\draw[->,thin] (s)--(j\n);}
+\draw[->,thin] (ja)--(ha); \draw[->,thin] (ja)--(hb); \draw[->,thin] (jb)--(hb); \draw[->,thin] (jb)--(hc);
+\draw[->,thin] (jc)--(hd); \draw[->,thin,dashed] (jg)--(he);
+\foreach \n in {a,b,c,d,e}{\draw[->,thin,orange!80!black] (h\n)--(ka); \draw[->,thin,orange!80!black] (h\n)--(kb);}
+\draw[->,thin] (ka)--(t); \draw[->,thin] (kb)--(t);
+\node[font=\tiny] at (-2.5,-0.45) {src};\node[font=\tiny] at (-1.3,1.6) {job};
+\node[font=\tiny] at (0.2,1.8) {job-hour};\node[font=\tiny] at (1.5,1.2) {hour-site};
+\node[font=\tiny] at (2.6,-0.55) {sink};
+\end{scope}
+\node[draw,rounded corners=2pt,fill=gray!10,align=center,text width=3.4cm] (exec) at (11.0,-4.75) {Execute hour-$t$ plan of real jobs only; observe $I_s(t{+}1)$};
+\draw[arr] (api)--(gbm); \draw[arr] (gbm)--(cp);
+\draw[arr] (hist)--(prof); \draw[arr] (prof)--(ghost);
+\draw[arr] (cp.east)-- node[above=2pt,font=\scriptsize,pos=0.4]{costs} (mcf.west |- cp.east);
+\draw[arr] (jobs.east)--(mcf.west |- jobs.east);
+\draw[arr] (ghost.east)--(mcf.west |- ghost.east);
+\draw[arr] (mcf.south)--(exec.north);
+\draw[arr] (exec.west) -- node[below,font=\scriptsize]{roll forward $t\leftarrow t{+}1$ (and ACI update)} (-1.85,-4.75) |- (api.west);
+\end{tikzpicture}
+\end{document}
