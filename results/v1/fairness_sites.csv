@@ -1,0 +1,25 @@
+game,method,site,attributed,standalone
+hindsight,Dual (Theorem 3),London,2.8131747975086085,3.9118644976590202
+hindsight,Dual (Theorem 3),North West England,-0.020975932059389694,0.5921067667203551
+hindsight,Dual (Theorem 3),South Scotland,-0.9078017646172781,0.14566196485931163
+hindsight,Dual (Theorem 3),West Midlands,1.48480680346177,2.046334848811815
+hindsight,Location-based,London,1.607883745332386,3.9118644976590202
+hindsight,Location-based,North West England,0.6670931415167375,0.5921067667203551
+hindsight,Location-based,South Scotland,0.17275990718179873,0.14566196485931163
+hindsight,Location-based,West Midlands,0.9214671102627888,2.046334848811815
+hindsight,Work-proportional,London,1.5080455351257922,3.9118644976590202
+hindsight,Work-proportional,North West England,0.686637058202156,0.5921067667203551
+hindsight,Work-proportional,South Scotland,0.3308092842239978,0.14566196485931163
+hindsight,Work-proportional,West Midlands,0.8437120267417666,2.046334848811815
+online,Dual (Theorem 3),London,2.9303181138745584,3.9938865440848526
+online,Dual (Theorem 3),North West England,0.031760636347084946,0.6302896521818553
+online,Dual (Theorem 3),South Scotland,-0.8821139375196364,0.16365451395589117
+online,Dual (Theorem 3),West Midlands,1.5504762486176975,2.088388571699746
+online,Location-based,London,1.778140880197274,3.9938865440848526
+online,Location-based,North West England,0.6901813091466968,0.6302896521818553
+online,Location-based,South Scotland,0.1743066882196693,0.16365451395589117
+online,Location-based,West Midlands,0.9878121837560652,2.088388571699746
+online,Work-proportional,London,1.6251888514917416,3.9938865440848526
+online,Work-proportional,North West England,0.7393736266086308,0.6302896521818553
+online,Work-proportional,South Scotland,0.3564971113216394,0.16365451395589117
+online,Work-proportional,West Midlands,0.9093814718976939,2.088388571699746

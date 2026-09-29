@@ -1,4 +1,10 @@
-"""Tables, statistics and figures for the scheduling experiments."""
+"""Tables, statistics and figures for the scheduling experiments (revision 1).
+
+Statistics: each (week, load, regime) cell has 3 independent workload traces; tests
+use week-level means (52 pairs). p-values: two-sided Wilcoxon signed-rank tests,
+Holm-adjusted jointly over all comparisons of a table. Confidence intervals for mean
+paired differences: moving-block bootstrap over weeks (block length 4, 5000 draws),
+which respects the serial correlation of consecutive weeks."""
 import json
 import numpy as np
 import pandas as pd
@@ -6,101 +12,123 @@ from scipy.stats import wilcoxon
 import matplotlib
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
+import matplotlib.dates as mdates
 from common import *
 
-plt.rcParams.update({"font.family": "serif", "font.size": 9, "axes.spines.top": False,
+plt.rcParams.update({"font.family": "serif", "font.serif": ["Nimbus Roman", "Times New Roman", "DejaVu Serif"],
+                     "mathtext.fontset": "stix", "font.size": 9, "axes.spines.top": False,
                      "axes.spines.right": False, "savefig.bbox": "tight", "savefig.dpi": 300})
-ORDER = ["ASAP-Local", "Greedy-Spatial", "Forecast-Reserve", "MPC", "MPC+conformal", "MPC-Perfect",
-         "CARMA", "CARMA+conformal", "CARMA-Perfect", "Oracle"]
-PAL = {"ASAP-Local": "0.75", "Greedy-Spatial": "0.55", "Forecast-Reserve": "#a6cee3",
-       "MPC": "#1f78b4", "MPC+conformal": "#6a3d9a", "MPC-Perfect": "#b2df8a",
-       "CARMA": "#d95f02", "CARMA+conformal": "#fdbf6f", "CARMA-Perfect": "#e31a1c", "Oracle": "0.1"}
+ORDER = ["ASAP-Local", "Greedy-Spatial", "Forecast-Reserve", "MPC", "MPC-Protect", "MPC+conformal",
+         "MPC-Perfect", "CARMA", "CARMA+conformal", "CARMA-Perfect", "Oracle"]
+PAL = {"ASAP-Local": "0.75", "Greedy-Spatial": "0.55", "Forecast-Reserve": "#a6cee3", "MPC": "#1f78b4",
+       "MPC-Protect": "#33a02c", "MPC+conformal": "#6a3d9a", "MPC-Perfect": "#b2df8a", "CARMA": "#d95f02",
+       "CARMA+conformal": "#fdbf6f", "CARMA-Perfect": "#e31a1c", "Oracle": "0.1",
+       "CARMA (in-sample profile)": "#fb9a99"}
+KEY = ["experiment", "migrate", "rho", "t0", "rep"]
 
 
 def holm(p):
-    p = np.asarray(p); o = np.argsort(p); m = len(p); adj = np.empty(m); run = 0
+    p = np.asarray(p, float); o = np.argsort(p); m = len(p); adj = np.empty(m); run = 0
     for r, i in enumerate(o):
         run = max(run, (m - r) * p[i]); adj[i] = min(1, run)
     return adj
 
 
+def block_boot(x, B=5000, block=4, seed=0):
+    """95% CI of the mean of a weekly series by moving-block bootstrap."""
+    x = np.asarray(x, float); n = len(x); rng = np.random.default_rng(seed)
+    nb = int(np.ceil(n / block)); starts = rng.integers(0, n - block + 1, (B, nb))
+    idx = (starts[:, :, None] + np.arange(block)[None, None, :]).reshape(B, -1)[:, :n]
+    m = x[idx].mean(1)
+    return np.percentile(m, [2.5, 97.5])
+
+
 def add_rel(d):
-    key = ["experiment", "migrate", "rho", "t0"]
-    base = d[d.label == "ASAP-Local"][key + ["emis_t"]].rename(columns={"emis_t": "base"})
-    orc = d[d.label == "Oracle"][key + ["emis_t"]].rename(columns={"emis_t": "orc"})
-    d = d.merge(base, on=key).merge(orc, on=key)
+    base = d[d.label == "ASAP-Local"][KEY + ["emis_t"]].rename(columns={"emis_t": "base"})
+    orc = d[d.label == "Oracle"][KEY + ["emis_t", "emis_adj_t"]].rename(columns={"emis_t": "orc", "emis_adj_t": "orc_adj"})
+    d = d.merge(base, on=KEY).merge(orc, on=KEY)
     d["red"] = 100 * (1 - d.emis_t / d.base)
     d["gap"] = 100 * (d.emis_t / d.orc - 1)
+    d["gap_adj"] = 100 * (d.emis_adj_t / d.orc_adj - 1)
     return d
 
 
-def main_table(d):
-    rows = []
-    for (mig, rho), g in d.groupby(["migrate", "rho"], sort=False):
-        carma = g[g.label == "CARMA"].set_index("t0")
-        others = [l for l in ORDER if l in set(g.label) and l not in ("CARMA", "Oracle")]
-        ps = []
-        for l in others:
-            x = g[g.label == l].set_index("t0").loc[carma.index]
-            ps.append(wilcoxon(carma.emis_t, x.emis_t).pvalue)
-        padj = dict(zip(others, holm(ps)))
-        for l in ORDER:
+def weekly(g, label, col="emis_t"):
+    return g[g.label == label].groupby("t0")[col].mean()
+
+
+def summarise(d, group_cols, order):
+    rows, tests = [], []
+    for key, g in d.groupby(group_cols, sort=False):
+        carma = weekly(g, "CARMA")
+        for l in order:
             x = g[g.label == l]
             if len(x) == 0:
                 continue
-            rows.append(dict(regime="Spatio-temporal" if mig else "Temporal-only", rho=rho, policy=l,
-                             emis=x.emis_t.mean(), red=x.red.mean(), red_sd=x.red.std(), gap=x.gap.mean(),
-                             late=100 * x.late_frac.mean(), mig=100 * x.mig_frac.mean(),
-                             ms=x.ms_per_decision.mean(), p_vs_carma=padj.get(l, np.nan),
-                             carma_better_weeks=int((carma.emis_t.values < g[g.label == l].set_index("t0").loc[carma.index].emis_t.values - 1e-9).sum()) if l in padj else np.nan))
-    return pd.DataFrame(rows)
+            r = dict(zip(group_cols, key if isinstance(key, tuple) else (key,)))
+            r.update(policy=l, emis=x.emis_t.mean(), red=x.red.mean(), gap=x.gap.mean(), gap_adj=x.gap_adj.mean(),
+                     late=100 * x.late_frac.mean(), mig=100 * x.mig_frac.mean(), ms=x.ms_per_decision.mean(),
+                     n=len(x))
+            if l not in ("CARMA", "Oracle"):
+                wl = weekly(g, l).loc[carma.index]
+                gd = (g[g.label == l].groupby("t0").gap.mean() - g[g.label == "CARMA"].groupby("t0").gap.mean()).loc[carma.index]
+                r["p_raw"] = wilcoxon(carma.values, wl.values).pvalue if not np.allclose(carma.values, wl.values) else 1.0
+                r["wins"] = int((carma.values < wl.values - 1e-9).sum()); r["weeks"] = len(carma)
+                lo, hi = block_boot(gd.values)
+                r.update(dgap=gd.mean(), dgap_lo=lo, dgap_hi=hi)
+            rows.append(r)
+    t = pd.DataFrame(rows)
+    m = t.p_raw.notna()
+    t.loc[m, "p"] = holm(t.loc[m, "p_raw"].values)
+    return t
 
 
 def fmt_p(p):
-    if np.isnan(p):
+    if pd.isna(p):
         return "--"
     return "$<$0.001" if p < 0.001 else f"{p:.3f}"
 
 
 def latex_main(tab):
-    for regime, fn in [("Spatio-temporal", "table_main_st.tex"), ("Temporal-only", "table_main_t.tex")]:
+    for regime, fn in [(True, "table_main_st.tex"), (False, "table_main_t.tex")]:
         lines = []
         for rho in [0.3, 0.5, 0.7]:
-            g = tab[(tab.regime == regime) & (tab.rho == rho)]
-            if regime == "Temporal-only":
-                g = g[g.policy != "Greedy-Spatial"]  # identical to ASAP-Local without migration
+            g = tab[(tab.migrate == regime) & (tab.rho == rho)]
+            if not regime:
+                g = g[g.policy != "Greedy-Spatial"]
             best = g[~g.policy.isin(["Oracle", "MPC-Perfect", "CARMA-Perfect"])].gap.min()
             for i, r in enumerate(g.itertuples()):
                 lab = f"$\\rho={rho}$" if i == 0 else ""
                 gap = f"{r.gap:.1f}"
                 if abs(r.gap - best) < 1e-9:
                     gap = r"\textbf{" + gap + "}"
-                mig = f" & {r.mig:.1f}" if regime == "Spatio-temporal" else ""
-                lines.append(f"{lab} & {r.policy} & {r.emis:.2f} & {r.red:.1f} & {gap} & {r.late:.2f}{mig} & {fmt_p(r.p_vs_carma)}\\\\")
+                mig = f" & {r.mig:.1f}" if regime else ""
+                lines.append(f"{lab} & {r.policy} & {r.emis:.2f} & {r.red:.1f} & {gap} & {r.gap_adj:.1f} & {r.late:.2f}{mig} & {fmt_p(r.p)}\\\\")
             lines.append(r"\addlinespace")
         open(RES / fn, "w").write("\n".join(lines[:-1]))
 
 
 def decomposition(tab):
     out = []
-    for (regime, rho), g in tab.groupby(["regime", "rho"], sort=False):
+    for (mig, rho), g in tab.groupby(["migrate", "rho"], sort=False):
         v = g.set_index("policy").gap
-        out.append(dict(regime=regime, rho=rho, mpc=v["MPC"], forecast_value=v["MPC"] - v["MPC-Perfect"],
-                        anticipation_value=v["MPC"] - v["CARMA"], carma=v["CARMA"],
-                        carma_perfect=v["CARMA-Perfect"]))
+        out.append(dict(migrate=mig, rho=rho, mpc=v["MPC"], protect=v["MPC-Protect"], carma=v["CARMA"],
+                        forecast_value_myopic=v["MPC"] - v["MPC-Perfect"],
+                        anticipation_value=v["MPC"] - v["CARMA"],
+                        forecast_value_anticip=v["CARMA"] - v["CARMA-Perfect"], carma_perfect=v["CARMA-Perfect"]))
     return pd.DataFrame(out)
 
 
 def fig_gap(d):
-    fig, axs = plt.subplots(1, 2, figsize=(7.2, 2.8), sharey=False)
-    pols = ["Greedy-Spatial", "Forecast-Reserve", "MPC", "MPC+conformal", "MPC-Perfect", "CARMA",
-            "CARMA+conformal", "CARMA-Perfect"]
+    fig, axs = plt.subplots(1, 2, figsize=(7.2, 2.8))
+    pols = ["Greedy-Spatial", "Forecast-Reserve", "MPC", "MPC-Protect", "MPC+conformal", "MPC-Perfect",
+            "CARMA", "CARMA+conformal", "CARMA-Perfect"]
     for ax, mig in zip(axs, [True, False]):
         g = d[d.migrate == mig]
-        w = 0.1
+        w = 0.09
         for k, p in enumerate(pols):
-            m = g[g.label == p].groupby("rho").gap
-            mu, se = m.mean(), m.std() / np.sqrt(m.count())
+            wk = g[g.label == p].groupby(["rho", "t0"]).gap.mean().groupby("rho")
+            mu = wk.mean(); se = wk.std() / np.sqrt(wk.count())
             x = np.arange(3) + (k - (len(pols) - 1) / 2) * w
             ax.bar(x, mu.values, w, yerr=1.96 * se.values, color=PAL[p], label=p,
                    error_kw=dict(lw=0.6, capsize=1.2), edgecolor="none")
@@ -109,36 +137,37 @@ def fig_gap(d):
         ax.set_title("(a) Spatio-temporal (migration allowed)" if mig else "(b) Temporal-only (no migration)",
                      fontsize=9, loc="left")
     h, l = axs[0].get_legend_handles_labels()
-    fig.legend(h, l, frameon=False, fontsize=7, ncol=4, loc="lower center", bbox_to_anchor=(0.5, -0.13))
+    fig.legend(h, l, frameon=False, fontsize=7, ncol=5, loc="lower center", bbox_to_anchor=(0.5, -0.14))
     fig.savefig(FIG / "fig4_gap.pdf"); plt.close(fig)
 
 
 def fig_weekly(d):
     g = d[(d.migrate == True) & (d.rho == 0.5)]
     fig, ax = plt.subplots(1, 2, figsize=(7.2, 2.6), gridspec_kw={"width_ratios": [1.7, 1]})
-    for p in ["Greedy-Spatial", "MPC", "CARMA", "Oracle"]:
-        x = g[g.label == p].sort_values("t0")
-        ax[0].plot(pd.to_datetime(x.week), x.red, color=PAL[p], lw=1.3 if p != "Oracle" else 1.0,
-                   ls="--" if p == "Oracle" else "-", label=p)
+    for p in ["Greedy-Spatial", "MPC", "MPC-Protect", "CARMA", "Oracle"]:
+        x = g[g.label == p].groupby("t0").red.mean()
+        ax[0].plot(pd.to_datetime([str(IDX[t].date()) for t in x.index]), x.values, color=PAL[p],
+                   lw=1.3 if p != "Oracle" else 1.0, ls="--" if p == "Oracle" else "-", label=p)
     ax[0].set_ylabel("Reduction vs ASAP-Local (%)")
-    ax[0].legend(frameon=False, fontsize=7, ncol=4, loc="lower center", bbox_to_anchor=(0.5, -0.33))
-    import matplotlib.dates as mdates
+    ax[0].legend(frameon=False, fontsize=7, ncol=5, loc="lower center", bbox_to_anchor=(0.5, -0.33))
     ax[0].xaxis.set_major_locator(mdates.MonthLocator(bymonth=[1, 3, 5, 7, 9, 11]))
     ax[0].xaxis.set_major_formatter(mdates.DateFormatter("%b"))
     ax[0].set_title("(a) Weekly emission reduction, 2024 ($\\rho$ = 0.5)", fontsize=9, loc="left")
-    a = g[g.label == "MPC"].set_index("t0").gap; b = g[g.label == "CARMA"].set_index("t0").gap.loc[a.index]
+    a = g[g.label == "MPC"].groupby("t0").gap.mean(); b = g[g.label == "CARMA"].groupby("t0").gap.mean().loc[a.index]
     ax[1].scatter(a, b, s=10, color=PAL["CARMA"])
     lim = [0, max(a.max(), b.max()) * 1.05]
     ax[1].plot(lim, lim, color="0.6", lw=0.8)
     ax[1].set_xlabel("MPC gap to oracle (%)"); ax[1].set_ylabel("CARMA gap to oracle (%)")
-    ax[1].set_title("(b) Paired weekly gaps", fontsize=9, loc="left")
+    ax[1].set_title("(b) Paired weekly gaps (mean of 3 traces)", fontsize=9, loc="left")
     fig.savefig(FIG / "fig5_weekly.pdf"); plt.close(fig)
 
 
 def fig_tuning():
     d = pd.concat([pd.read_csv(RES / "tuning_stage1.csv"), pd.read_csv(RES / "tuning_stage2.csv")])
+    d = d[d.regime == "st"]
     orc = d[d.policy == "Oracle"][["t0", "rho", "emis_t"]].rename(columns={"emis_t": "orc"})
     d = d.merge(orc, on=["t0", "rho"]); d["gap"] = 100 * (d.emis_t / d.orc - 1)
+    cfg = json.load(open(RES / "carma_config.json"))["st"]
     fig, ax = plt.subplots(1, 2, figsize=(7.2, 2.6))
     s1 = d[(d.policy == "CARMA") & (d.cube == "pred")].groupby(["kappa", "look"]).gap.mean().unstack()
     mpc = d[(d.policy == "MPC") & (d.cube == "pred")].gap.mean()
@@ -146,67 +175,69 @@ def fig_tuning():
         ax[0].plot(s1.index, s1[L], "o-", color=c, ms=3.5, lw=1.3, label=f"look-ahead $\\ell$ = {int(L)} h")
     ax[0].axhline(mpc, color=PAL["MPC"], ls="--", lw=1, label="MPC ($\\kappa$ = 0)")
     ax[0].set_xlabel("Anticipation weight $\\kappa$"); ax[0].set_ylabel("Validation gap to oracle (%)")
-    ax[0].set_ylim(5, 22)
-    ax[0].legend(frameon=False, fontsize=7, loc="center right", bbox_to_anchor=(1.0, 0.62)); ax[0].set_title("(a) Demand anticipation", fontsize=9, loc="left")
-    cfg = json.load(open(RES / "carma_config.json"))
+    ax[0].legend(frameon=False, fontsize=7, loc="center right", bbox_to_anchor=(1.0, 0.62))
+    ax[0].set_title("(a) Demand anticipation", fontsize=9, loc="left")
     for pol, c, sub in [("MPC", PAL["MPC"], d.policy == "MPC"),
                         ("CARMA", PAL["CARMA"], (d.policy == "CARMA") & (d.kappa == cfg["kappa"]) & (d.look == cfg["look"]))]:
         g = d[sub]
         lv = g[g.cube.str.startswith("q")].groupby("cube").gap.mean()
         xs = [int(k[1:]) / 100 for k in lv.index]
-        ax[1].plot(xs, lv.values, "o-", color=c, ms=3.5, lw=1.3, label=f"{pol}, conformal $U^\\beta$")
+        o = np.argsort(xs)
+        ax[1].plot(np.array(xs)[o], lv.values[o], "o-", color=c, ms=3.5, lw=1.3, label=f"{pol}, conformal $U^\\beta$")
         ax[1].axhline(g[g.cube == "pred"].gap.mean(), color=c, ls=":", lw=1.2, label=f"{pol}, point forecast")
     ax[1].set_xlabel("Conformal level $\\beta$"); ax[1].set_ylabel("Validation gap to oracle (%)")
-    ax[1].set_ylim(5, None)
     ax[1].legend(frameon=False, fontsize=6.5); ax[1].set_title("(b) Carbon cost view", fontsize=9, loc="left")
     fig.savefig(FIG / "fig6_tuning.pdf"); plt.close(fig)
 
 
-def sens_table(s):
-    rows = []
-    for e, g in s.groupby("experiment", sort=False):
-        c = g[g.label == "CARMA"].set_index("t0")
-        for l in ["ASAP-Local", "Greedy-Spatial", "Forecast-Reserve", "MPC", "CARMA", "Oracle"]:
-            x = g[g.label == l]
-            p = wilcoxon(c.emis_t, x.set_index("t0").loc[c.index].emis_t).pvalue if l not in ("CARMA", "Oracle") else np.nan
-            rows.append(dict(setting=e, policy=l, red=x.red.mean(), gap=x.gap.mean(),
-                             late=100 * x.late_frac.mean(), mig=100 * x.mig_frac.mean(), p=p))
-    return pd.DataFrame(rows)
-
-
-def latex_sens(st, s):
+def latex_sens(st):
+    order = ["urgent=0.1", "urgent=0.5", "eta=0.005", "eta=0.06", "load=0.4, profile=0.5", "load=0.6, profile=0.5",
+             "cap=150/400/400/600", "cap=600/400/400/600", "cap=300/400/400/1200", "always-on (idle 0.2 kWh)",
+             "marginal accounting"]
     names = {"urgent=0.1": "Urgent share $\\upsilon=0.1$", "urgent=0.5": "Urgent share $\\upsilon=0.5$",
              "eta=0.005": "Network energy $\\eta=0.005$ kWh/GB", "eta=0.06": "Network energy $\\eta=0.06$ kWh/GB",
              "load=0.4, profile=0.5": "Load $\\rho=0.4$, profile learned at 0.5",
-             "load=0.6, profile=0.5": "Load $\\rho=0.6$, profile learned at 0.5"}
-    order = ["urgent=0.1", "urgent=0.5", "eta=0.005", "eta=0.06", "load=0.4, profile=0.5", "load=0.6, profile=0.5"]
+             "load=0.6, profile=0.5": "Load $\\rho=0.6$, profile learned at 0.5",
+             "cap=150/400/400/600": "Clean-site capacity halved (150)",
+             "cap=600/400/400/600": "Clean-site capacity doubled (600)",
+             "cap=300/400/400/1200": "London capacity doubled (1200)",
+             "always-on (idle 0.2 kWh)": "Always-on servers (idle 0.2 kWh)$^{a}$",
+             "marginal accounting": "Marginal-emission accounting$^{b}$"}
     lines = []
     for e in order:
-        g = st[st.setting == e].set_index("policy")
-        x = s[s.experiment == e]
-        c = x[x.label == "CARMA"].set_index("t0").emis_t
-        m = x[x.label == "MPC"].set_index("t0").emis_t.loc[c.index]
-        wins = int((c < m - 1e-9).sum())
+        g = st[st.experiment == e].set_index("policy")
+        if len(g) == 0:
+            continue
         lines.append(f"{names[e]} & {g.red['Oracle']:.1f} & {g.gap['Greedy-Spatial']:.1f} & {g.gap['Forecast-Reserve']:.1f} & "
-                     f"{g.gap['MPC']:.1f} & \\textbf{{{g.gap['CARMA']:.1f}}} & {wins}/{len(c)} & {g.late['MPC']:.2f} / {g.late['CARMA']:.2f}\\\\")
+                     f"{g.gap['MPC']:.1f} & {g.gap['MPC-Protect']:.1f} & \\textbf{{{g.gap['CARMA']:.1f}}} & "
+                     f"{int(g.wins['MPC'])}/{int(g.weeks['MPC'])} & {g.late['MPC']:.2f} / {g.late['CARMA']:.2f}\\\\")
     open(RES / "table_sens.tex", "w").write("\n".join(lines))
-    print("max p (CARMA vs others):", st.p.max())
+
+
+def latex_trace(tt):
+    lines = []
+    for r in tt.itertuples():
+        lines.append(f"{r.policy} & {r.emis:.2f} & {r.red:.1f} & {r.gap:.1f} & {r.late:.2f} & {r.mig:.1f} & {fmt_p(r.p)}\\\\")
+    open(RES / "table_trace.tex", "w").write("\n".join(lines))
 
 
 if __name__ == "__main__":
+    pd.set_option("display.width", 220)
     d = add_rel(pd.read_csv(RES / "test_main.csv"))
-    tab = main_table(d)
+    tab = summarise(d, ["migrate", "rho"], ORDER)
     tab.to_csv(RES / "summary_main.csv", index=False)
     latex_main(tab)
     dec = decomposition(tab); dec.to_csv(RES / "decomposition.csv", index=False)
-    pd.set_option("display.width", 200)
-    print(tab.round(3).to_string())
-    print(dec.round(2).to_string())
+    print(tab.drop(columns=["p_raw"]).round(3).to_string()); print(dec.round(2).to_string())
     fig_gap(d); fig_weekly(d); fig_tuning()
-    try:
-        s = add_rel(pd.read_csv(RES / "test_sens.csv"))
-        st = sens_table(s); st.to_csv(RES / "summary_sens.csv", index=False)
-        latex_sens(st, s)
-        print(st.round(3).to_string())
-    except FileNotFoundError:
-        pass
+    for which, fn in [("sens", latex_sens), ("trace", latex_trace)]:
+        try:
+            s = add_rel(pd.read_csv(RES / f"test_{which}.csv"))
+        except FileNotFoundError:
+            continue
+        grp = ["experiment"]
+        order = ORDER + ["CARMA (in-sample profile)"]
+        t = summarise(s, grp, order)
+        t.to_csv(RES / f"summary_{which}.csv", index=False)
+        fn(t)
+        print(t.drop(columns=["p_raw"]).round(3).to_string())

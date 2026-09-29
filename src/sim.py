@@ -73,7 +73,7 @@ from ortools.graph.python import min_cost_flow
 QW, QC = 100.0, 100.0
 
 
-def flow_solve(rem, width, orig, rel, win, cost, cap, pen):
+def flow_solve(rem, width, orig, rel, win, cost, cap, pen, job_weight=None):
     """rel/win: release offset and window length (hours) of each job within the
     planning grid cost[L, o, s], cap[L, s]. Returns (jj, hh, ss, x) triples."""
     J = len(rem); L = cost.shape[0]
@@ -97,6 +97,8 @@ def flow_solve(rem, width, orig, rel, win, cost, cap, pen):
     s_rep = np.tile(np.arange(S), n_jh)
     h_rep = hh[jh_rep]
     c_arc = cost[h_rep, orig[jj[jh_rep]], s_rep]
+    if job_weight is not None:
+        c_arc = c_arc * job_weight[jj[jh_rep]]
     tails.append(jh_n[jh_rep]); heads.append(hs_n[h_rep * S + s_rep])
     caps.append(w_int[jj[jh_rep]]); costs.append(np.rint(np.minimum(c_arc, 1e9) * QC).astype(np.int64))
     first_x = sum(len(t) for t in tails)
@@ -231,6 +233,42 @@ class Reservation(Policy):
         return x
 
 
+class MPCProtect(Policy):
+    """Myopic MPC with a protection level: planned work may use only a share (1-r) of
+    every site's capacity; the protected share r of the current hour is released only
+    to jobs whose deadline is at most `tight` hours away (revenue-management style)."""
+
+    def __init__(self, r=0.2, tight=2, name=None, clean_only=True):
+        self.r, self.tight, self.clean_only = r, tight, clean_only
+        self.name = name or f"MPC-Protect({r})"
+
+    def act(self, t, P, view):
+        cap = view["cap"]
+        prot = np.full(S, self.r)
+        if self.clean_only:  # protect only sites cleaner than the fleet median over the window
+            local = view["cost_fc"][:, np.arange(S), np.arange(S)].mean(0)
+            prot = np.where(local <= np.median(local), self.r, 0.0)
+        x = solve_alloc(P["rem"], P["width"], P["orig"], P["dl"], t, view["cost_fc"], cap * (1 - prot[None, :]))
+        left = np.maximum(cap[0] - x.sum(0), 0)
+        rem2 = P["rem"] - x.sum(1); w2 = P["width"] - x.sum(1)
+        tight = [k for k in np.argsort(P["dl"], kind="stable") if P["dl"][k] - t <= self.tight and rem2[k] > 1e-9]
+        if tight:
+            c0 = view["cost_true"][0]
+            pref = [[s for s in np.argsort(c0[P["orig"][j]]) if c0[P["orig"][j], s] < 1e6]
+                    for j in range(len(rem2))]
+            x = x + _edf_fill(tight, rem2, w2, left, pref)
+        # protected capacity that urgent work did not claim perishes at the end of the
+        # hour, so it is released to the remaining work (earliest deadline first)
+        rem3 = P["rem"] - x.sum(1); w3 = P["width"] - x.sum(1)
+        c0 = view["cost_true"][0]
+        rest = [k for k in np.argsort(P["dl"], kind="stable") if rem3[k] > 1e-9]
+        if rest and left.sum() > 1e-9:
+            pref = [[s for s in np.argsort(c0[P["orig"][j]]) if c0[P["orig"][j], s] < 1e6 and prot[s] > 0]
+                    for j in range(len(rem3))]
+            x = x + _edf_fill(rest, rem3, np.maximum(w3, 0), left, pref)
+        return x
+
+
 class MPC(Policy):
     """Receding-horizon LP. `cube_key` selects the carbon-intensity view used for
     future hours: 'truth' (clairvoyant), 'pred', 'persist', 'snaive', or 'upper'
@@ -249,14 +287,18 @@ class MPC(Policy):
 # --------------------------------------------------------------------------
 # Simulation loop
 # --------------------------------------------------------------------------
-def simulate(policy, jobs, t0, truth, cube, migrate=True):
+def simulate(policy, jobs, t0, truth, cube, migrate=True, acct=None):
     """Run `policy` on the job stream. cube[t, s, h] is the CI view at issue time t
-    for hour t+h (h=0 is the observed current hour). Metrics cover jobs flagged ev."""
+    for hour t+h (h=0 is the observed current hour). Metrics cover jobs flagged ev.
+    `acct` (default: truth) is the intensity used to account emissions, e.g. a
+    marginal emission factor, while decisions are always based on `truth`/`cube`."""
     t_first, t_end = int(jobs["a"].min()), int(jobs["d"].max()) + 1
     rem = jobs["w"].copy()
     emis_j = np.zeros(jobs["n"]); mig_j = np.zeros(jobs["n"]); late_j = np.zeros(jobs["n"])
+    emis_host = np.zeros(S)
     policy.reset(jobs, t0)
     ct_all = unit_cost(truth, migrate)  # [T, o, s]
+    ca_all = ct_all if acct is None else unit_cost(acct, migrate)
     fill = np.nanmean(truth)
     n_dec, wall = 0, 0.0
     for t in range(t_first, t_end):
@@ -275,28 +317,44 @@ def simulate(policy, jobs, t0, truth, cube, migrate=True):
         rem[rem < DONE_TOL] = 0.0  # ignore residue from the 0.01 server-hour flow grid
         step = ct_all[t][jobs["o"][ids]]
         assert not np.any((x > 1e-6) & (step >= 1e6)), "migration used when disallowed"
-        emis_j[ids] += (x * step).sum(1)
+        xe = x * ca_all[t][jobs["o"][ids]]
+        emis_j[ids] += xe.sum(1)
+        emis_host += xe[jobs["ev"][ids]].sum(0)
         mig_j[ids] += (x * (1 - np.eye(S))[jobs["o"][ids]]).sum(1)
         # work still outstanding when the deadline passes is recorded as late
         miss = ids[(jobs["d"][ids] == t + 1) & (rem[ids] > DONE_TOL)]
         late_j[miss] = rem[miss]
     ev = jobs["ev"]; total = jobs["w"][ev].sum()
     by_o = [float(emis_j[ev & (jobs["o"] == o)].sum() / 1e6) for o in range(S)]
-    return dict(emis_by_origin=by_o, emis_t=emis_j[ev].sum() / 1e6, late_frac=late_j[ev].sum() / total,
+    c_late = late_unit_cost(ca_all[t_first:t_end], migrate)
+    return dict(emis_by_origin=by_o, emis_by_host=list(emis_host / 1e6), emis_t=emis_j[ev].sum() / 1e6, late_frac=late_j[ev].sum() / total,
+                emis_adj_t=(emis_j[ev].sum() + c_late * late_j[ev].sum()) / 1e6,
                 late_jobs=float((late_j[ev] > DONE_TOL).mean()),
                 unfinished=float(rem[ev].sum()) / total, mig_frac=mig_j[ev].sum() / total,
                 work=total, jobs=int(ev.sum()), ms_per_decision=1e3 * wall / max(n_dec, 1))
 
 
-def oracle(jobs, t0, truth, migrate=True):
-    """Offline clairvoyant plan (known arrivals and CI): lower bound on emissions."""
+def late_unit_cost(ct, migrate=True):
+    """Charge for late work in the service-adjusted metric: the largest local unit
+    cost in the episode (late work is valued as if run at the dirtiest capacity)."""
+    return float(ct[:, np.arange(S), np.arange(S)].max())
+
+
+def oracle(jobs, t0, truth, migrate=True, acct=None):
+    """Offline clairvoyant plan (known arrivals and CI). All jobs of the trace must be
+    served, but only evaluated jobs (flag ev) carry emission costs in the objective, so
+    the value is a lower bound on the evaluated emissions of any schedule that serves
+    every job by its deadline."""
     tf = int(jobs["a"].min()); L = int(jobs["d"].max()) - tf
-    ct = unit_cost(truth[tf:tf + L], migrate)
+    ct = unit_cost((truth if acct is None else acct)[tf:tf + L], migrate)
     cap = capacity(np.arange(tf, tf + L))
+    ev = jobs["ev"]
     jj, hh, ss, x, u = flow_solve(jobs["w"], jobs["m"], jobs["o"], jobs["a"] - tf,
-                                  jobs["d"] - jobs["a"], ct, cap, np.full(jobs["n"], BIG))
-    ev = jobs["ev"]; total = jobs["w"][ev].sum(); k = ev[jj]
-    return dict(emis_t=float((x * ct[hh, jobs["o"][jj], ss])[k].sum()) / 1e6,
+                                  jobs["d"] - jobs["a"], ct, cap, np.full(jobs["n"], BIG),
+                                  job_weight=ev.astype(float))
+    total = jobs["w"][ev].sum(); k = ev[jj]
+    e = float((x * ct[hh, jobs["o"][jj], ss])[k].sum())
+    return dict(emis_t=e / 1e6, emis_adj_t=(e + late_unit_cost(ct, migrate) * float(u[ev].sum())) / 1e6,
                 late_frac=float(u[ev].sum()) / total, late_jobs=float((u[ev] > 1e-3).mean()),
                 unfinished=float(u[ev].sum()) / total,
                 mig_frac=float(x[k & (jobs["o"][jj] != ss)].sum()) / total, work=total,
@@ -352,6 +410,8 @@ class AnticipatoryMPC(Policy):
         orig = np.r_[P["orig"], o].astype(int)
         rel = np.r_[np.zeros(J, int), k + 1].astype(int)
         dl = np.r_[np.clip(P["dl"] - t, 1, H), np.minimum(k + 1 + WIN_BINS[b], H)].astype(int)
+        # ghost jobs are made window-feasible (Assumption A1): width >= work / window
+        width[J:] = np.maximum(width[J:], rem[J:] / np.maximum(dl[J:] - rel[J:], 1))
         return solve_general(rem, width, orig, rel, dl, view["cost_fc"], view["cap"], J, self.ghost_pen)
 
 
@@ -371,7 +431,7 @@ def solve_general(rem, width, orig, rel, dl, cost, cap, n_real, ghost_pen=None):
 # --------------------------------------------------------------------------
 # Hindsight LP with duals (cooperative carbon attribution, Section 3.6)
 # --------------------------------------------------------------------------
-def hindsight_lp(jobs, t0, truth, coalition=None, migrate=True):
+def hindsight_lp(jobs, t0, truth, coalition=None, migrate=True, want_range=False):
     """Offline LP (2)-(5) for the sites in `coalition` (jobs originating there,
     capacity of those sites only). Returns value (tCO2, evaluated jobs only when
     coalition is the grand coalition) and the per-site dual attribution phi[o]."""
@@ -410,5 +470,38 @@ def hindsight_lp(jobs, t0, truth, coalition=None, migrate=True):
         sel = jobs["o"] == o
         phi[o] = (w[sel] * lam[sel]).sum() + (m[sel] * nu_job[sel]).sum() + (cap[:, o] * mu[:, o]).sum()
     x = res.x[:nv]
-    phys = np.array([(x * c)[jobs["o"][jj] == o].sum() for o in range(S)])
-    return dict(value=res.fun / 1e6, phi=phi / 1e6, phys=phys / 1e6)
+    phys = np.array([(x * c)[jobs["o"][jj] == o].sum() for o in range(S)])   # origin-based
+    host = np.array([(x * c)[ss == o].sum() for o in range(S)])              # host-based
+    slack = float(res.x[nv:].sum())
+    out = dict(value=res.fun / 1e6, emis=float((x * c).sum()) / 1e6, slack=slack,
+               phi=phi / 1e6, phys=phys / 1e6, host=host / 1e6)
+    if want_range:
+        out["phi_range"] = dual_range(cobj, sp.vstack([A1, A2]).tocsr(), Aeq, np.r_[b1, b2], w,
+                                      res.fun, jobs, cap, m, win, coalition) / 1e6
+    return out
+
+
+def dual_range(cobj, Aub, Aeq, bub, beq, value, jobs, cap, m, win, coalition, tol=1e-6):
+    """Range of each site's dual attribution over the set of optimal dual solutions:
+    min/max (b^o)^T y s.t. A^T y <= c, y_ub <= 0, b^T y >= value (1 - tol)."""
+    import scipy.sparse as sp
+    from scipy.optimize import linprog
+    J = Aeq.shape[0]; K = Aub.shape[0]
+    AT = sp.hstack([Aeq.T, Aub.T]).tocsr()           # (nv+J) x (J+K)
+    b = np.r_[beq, bub]
+    bounds = [(None, None)] * J + [(None, 0)] * K
+    L = cap.shape[0]
+    rng = np.zeros((S, 2))
+    rows_w = np.repeat(np.arange(J), win)
+    for o in coalition:
+        bo = np.zeros(J + K)
+        sel = jobs["o"] == o
+        bo[:J] = np.where(sel, beq, 0.0)
+        capo = np.zeros((L, S)); capo[:, o] = cap[:, o]
+        bo[J:J + L * S] = capo.ravel()
+        bo[J + L * S:] = np.where(sel[rows_w], bub[L * S:], 0.0)
+        for k, sgn in enumerate([1.0, -1.0]):
+            r = linprog(sgn * bo, A_ub=sp.vstack([AT, sp.csr_matrix(-b)]).tocsr(),
+                        b_ub=np.r_[cobj, -value * (1 - tol)], bounds=bounds, method="highs")
+            rng[o, k] = sgn * r.fun if r.status == 0 else np.nan
+    return rng

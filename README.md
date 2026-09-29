@@ -1,8 +1,7 @@
 # Carbon-aware anticipatory scheduling of deferrable computing workloads
 
-Code, data and manuscript for the study *"Anticipating demand, not only carbon: receding-horizon
-scheduling of deferrable computing workloads across data centres with calibrated carbon-intensity
-forecasts"*, prepared for **Sustainable Operations and Computers** (KeAi).
+Code, data and manuscript for the study *"Anticipating demand in carbon-aware scheduling across data
+centres: guarantees and fair carbon attribution"*, prepared for **Sustainable Operations and Computers** (KeAi).
 
 ## Contents
 

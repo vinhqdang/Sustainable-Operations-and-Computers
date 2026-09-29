@@ -6,7 +6,7 @@ matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 from common import *
 
-plt.rcParams.update({"font.family": "serif", "font.size": 9, "axes.spines.top": False,
+plt.rcParams.update({"font.family": "serif", "font.serif": ["Nimbus Roman", "DejaVu Serif"], "mathtext.fontset": "stix", "font.size": 9, "axes.spines.top": False,
                      "axes.spines.right": False, "savefig.bbox": "tight", "savefig.dpi": 300})
 COL = ["#1b9e77", "#7570b3", "#d95f02", "#e7298a"]
 FIG.mkdir(exist_ok=True)

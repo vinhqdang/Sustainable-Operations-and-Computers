@@ -32,9 +32,12 @@ def task(args):
     jobs = week_jobs(i, t0)
     out = dict(kind=kind, week=i, t0=t0, coal="".join(map(str, coal)))
     if kind == "lp":
-        r = hindsight_lp(jobs, t0, TRUTH, coal)
-        out.update(value=r["value"], **{f"phi{o}": r["phi"][o] for o in range(S)},
-                   **{f"phys{o}": r["phys"][o] for o in range(S)},
+        full = len(coal) == S
+        r = hindsight_lp(jobs, t0, TRUTH, coal, want_range=full and i % 6 == 0)
+        out.update(value=r["value"], emis=r["emis"], slack=r["slack"], **{f"phi{o}": r["phi"][o] for o in range(S)},
+                   **{f"phys{o}": r["phys"][o] for o in range(S)}, **{f"host{o}": r["host"][o] for o in range(S)},
+                   **({f"philo{o}": r["phi_range"][o, 0] for o in range(S)} if "phi_range" in r else {}),
+                   **({f"phihi{o}": r["phi_range"][o, 1] for o in range(S)} if "phi_range" in r else {}),
                    **{f"work{o}": float(jobs["w"][jobs["o"] == o].sum()) for o in range(S)})
     else:  # CARMA operated by coalition `coal` alone
         mask = np.isin(np.arange(S), coal).astype(float)
@@ -43,11 +46,12 @@ def task(args):
         try:
             W, M = profile_for(RHO)
             prof = (W * mask[None, :, None], M * mask[None, :, None])
-            pol = AnticipatoryMPC(prof, CFG["kappa"], CFG["look"])
-            r = simulate(pol, restrict(jobs, list(coal)), t0, TRUTH, CUBES[CFG["cube"]], True)
+            pol = AnticipatoryMPC(prof, CFG["st"]["kappa"], CFG["st"]["look"])
+            r = simulate(pol, restrict(jobs, list(coal)), t0, TRUTH, CUBES[CFG["st"]["cube"]], True)
         finally:
             sim.CAP = base_cap
-        out.update(value=r["emis_t"], late=r["late_frac"], **{f"phys{o}": r["emis_by_origin"][o] for o in range(S)})
+        out.update(value=r["emis_t"], late=r["late_frac"], **{f"phys{o}": r["emis_by_origin"][o] for o in range(S)},
+                   **{f"host{o}": r["emis_by_host"][o] for o in range(S)})
     return out
 
 

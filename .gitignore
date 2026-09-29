@@ -230,3 +230,6 @@ data/forecasts.pkl
 *.fls
 *.fdb_latexmk
 *.synctex.gz
+data/traces/batch_task.csv
+data/traces/batch_task.tar.gz
+results/partial_*.jsonl
