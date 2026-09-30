@@ -16,7 +16,7 @@ LAGS = [1, 2, 3, 6, 12, 23]
 
 def build_features(wide):
     ci = wide["ci"]
-    gb = ci[18]
+    gb = ci[REF]
     T = len(ci)
     tt = ci.index
     rows = []
@@ -81,7 +81,7 @@ def fit_and_forecast():
     Fp["persist"] = Fp["y0"]
     Fp["snaive"] = Fp["y0"] + Fp["yday"]
     out = Fp[["t", "time", "site", "h", "y0", "vol", "truth", "pred", "persist", "snaive", "filled_tgt"]]
-    out.to_pickle(DATA / "forecasts.pkl")
+    out.to_pickle(FORECAST_PATH)
     json.dump({"fit_seconds": fit_s, "n_train": len(tr), "features": feats},
               open(RES / "forecast_model_info.json", "w"), indent=1)
     return out

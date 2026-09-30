@@ -43,9 +43,13 @@ summ = acc.groupby(["model"]).agg(mae=("mae", "mean"), rmse=("rmse", "mean")).ro
 bys = acc.groupby(["model", "site"]).mae.mean().unstack().round(1)
 byh = acc.groupby(["model", "h"]).mae.mean().unstack()[[1, 3, 6, 12, 24]].round(1)
 print(summ); print(bys); print(byh); print(calib.round(3))
-raw = pd.read_csv(DATA / "raw" / "gb_regional_ci_2022_2024.csv.gz", usecols=["time"])
-hrs = pd.to_datetime(raw.time).dt.tz_localize(None).dt.floor("h")
 full = pd.date_range("2022-01-01", "2024-12-31 23:00", freq="h")
-json.dump({"hours": len(full), "hours_without_data": int((~full.isin(hrs)).sum()),
+if FLEET == "GB":
+    raw = pd.read_csv(DATA / "raw" / "gb_regional_ci_2022_2024.csv.gz", usecols=["time"])
+    hrs = pd.to_datetime(raw.time).dt.tz_localize(None).dt.floor("h")
+    n_no_data = int((~full.isin(hrs)).sum())
+else:
+    n_no_data = int(filled_mask().sum())
+json.dump({"hours": len(full), "hours_without_data": n_no_data,
            "filled_hours": [str(x) for x in load_hourly().index[filled_mask()]]},
           open(RES / "data_info.json", "w"))

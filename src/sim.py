@@ -12,8 +12,8 @@ from common import *
 E_IT = 0.40      # kWh per server-hour (IT energy)
 DATA_GB = 2.0    # GB moved per migrated server-hour of work
 E_NET = 0.02     # kWh per GB transferred
-CAP = np.array([300.0, 400.0, 400.0, 600.0])      # batch servers per site
-ORIGIN_P = np.array([0.10, 0.20, 0.25, 0.45])       # share of jobs submitted per site
+CAP = BASE_CAP.copy()                              # batch servers per site
+ORIGIN_P = BASE_ORIGIN_P.copy()                     # share of jobs submitted per site
 S = len(SITE_IDS)
 DONE_TOL = 0.05  # server-hours treated as complete
 BIG = 1.0e4      # penalty (g) per server-hour left unfinished at a deadline
@@ -21,9 +21,9 @@ BIG = 1.0e4      # penalty (g) per server-hour left unfinished at a deadline
 
 def capacity(hours):
     """Servers available for batch work: capacity net of diurnal interactive load."""
-    hod = (hours % 24)
+    hod = (np.asarray(hours)[:, None] + TZ[None, :]) % 24          # local hour of each site
     bg = 0.20 + 0.15 * np.sin(2 * np.pi * (hod - 8) / 24)
-    return CAP[None, :] * (1 - bg[:, None])
+    return CAP[None, :] * (1 - bg)
 
 
 def unit_cost(ci, migrate=True):
@@ -42,18 +42,31 @@ def make_jobs(t0, rho, seed, hours=168, urgent=0.3, pre=24, post=24):
     trailing load so that the evaluated week sees steady-state congestion."""
     rng = np.random.default_rng(seed)
     hh = np.arange(t0 - pre, t0 + hours + post)
-    idx_week = (hh // 24) % 7  # day index relative to data origin (2022-01-01 = Saturday)
-    wd = ((idx_week + 5) % 7) < 5  # Monday..Friday
-    diurnal = 1 + 0.5 * np.sin(2 * np.pi * ((hh % 24) - 8) / 24)
-    shape = diurnal * np.where(wd, 1.0, 0.7)
     m_mean = (64 - 4) / np.log(16.0)
     r_mean = 3.5
     avg_cap = capacity(np.arange(24)).sum(axis=1).mean()
-    lam = rho * avg_cap / (m_mean * r_mean) * shape / shape.mean()
-    n = rng.poisson(lam)
-    a = np.repeat(hh, n)
-    N = len(a)
-    o = rng.choice(S, size=N, p=ORIGIN_P)
+    if not TZ.any():
+        idx_week = (hh // 24) % 7  # day index relative to data origin (2022-01-01 = Saturday)
+        wd = ((idx_week + 5) % 7) < 5  # Monday..Friday
+        diurnal = 1 + 0.5 * np.sin(2 * np.pi * ((hh % 24) - 8) / 24)
+        shape = diurnal * np.where(wd, 1.0, 0.7)
+        lam = rho * avg_cap / (m_mean * r_mean) * shape / shape.mean()
+        n = rng.poisson(lam)
+        a = np.repeat(hh, n)
+        N = len(a)
+        o = rng.choice(S, size=N, p=ORIGIN_P)
+    else:
+        # sites in different time zones: the arrival rate of every origin follows its own local time
+        loc = hh[:, None] + TZ[None, :]
+        idx_week = (loc // 24) % 7
+        wd = ((idx_week + 5) % 7) < 5
+        diurnal = 1 + 0.5 * np.sin(2 * np.pi * ((loc % 24) - 8) / 24)
+        shape = diurnal * np.where(wd, 1.0, 0.7)                      # [T, S]
+        lam = rho * avg_cap / (m_mean * r_mean) * ORIGIN_P[None, :] * shape / shape.mean(axis=0)[None, :]
+        n = rng.poisson(lam)                                          # [T, S]
+        a = np.repeat(np.repeat(hh[:, None], S, 1).ravel(), n.ravel())
+        o = np.repeat(np.tile(np.arange(S), len(hh)), n.ravel())
+        N = len(a)
     m = np.exp(rng.uniform(np.log(4), np.log(64), N))
     r = rng.integers(1, 7, N).astype(float)
     f = np.where(rng.random(N) < urgent, 1.0, rng.uniform(1.5, 4.0, N))

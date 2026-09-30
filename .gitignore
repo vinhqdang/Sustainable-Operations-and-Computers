@@ -235,3 +235,6 @@ data/traces/batch_task.tar.gz
 results/partial_*.jsonl
 logs/
 results/v2/
+data/forecasts_*.pkl
+data/hourly_*.pkl
+results/fleets/*/partial_*.jsonl

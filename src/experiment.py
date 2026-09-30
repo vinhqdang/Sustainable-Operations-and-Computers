@@ -51,7 +51,7 @@ def marginal_factor():
     return mef
 
 
-MEF = marginal_factor()
+MEF = marginal_factor() if FLEET == "GB" else None
 
 
 def run_one(spec):
@@ -60,8 +60,11 @@ def run_one(spec):
     import sim
     sim.E_NET = spec.get("eta", 0.02)
     sim.E_IT = spec.get("eit", 0.40)
-    base_cap = np.array([300.0, 400.0, 400.0, 600.0])
-    sim.CAP = np.array(spec["cap"], float) if spec.get("cap") is not None else base_cap
+    base_cap = BASE_CAP
+    sim.CAP = np.array(spec["cap"], float) if spec.get("cap") is not None else base_cap.copy()
+    sim.ORIGIN_P = BASE_ORIGIN_P[::-1].copy() if spec.get("layout") == "reversed" else BASE_ORIGIN_P.copy()
+    if spec.get("layout") == "reversed":
+        sim.CAP = base_cap[::-1].copy()
     urgent = spec.get("urgent", 0.3)
     hist = None
     if spec.get("workload", "synthetic") == "trace":

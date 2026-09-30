@@ -9,7 +9,7 @@ EPS = 5.0  # gCO2/kWh floor on the volatility scale
 
 def load_cubes():
     """Return truth[T,S], pred[T,S,H+1], persist, snaive, vol[T,S], and time index."""
-    f = pd.read_pickle(DATA / "forecasts.pkl")
+    f = pd.read_pickle(FORECAST_PATH)
     wide = load_hourly()
     idx = wide.index
     T, S = len(idx), len(SITE_IDS)
