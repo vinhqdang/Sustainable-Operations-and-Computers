@@ -90,8 +90,9 @@ def allf():
     # figure
     plt.rcParams.update({"font.family": "serif", "font.serif": ["Nimbus Roman", "Times New Roman", "DejaVu Serif"],
                          "mathtext.fontset": "stix", "font.size": 9, "axes.spines.top": False, "axes.spines.right": False,
-                         "savefig.bbox": "tight", "savefig.dpi": 300})
-    pols = ["MPC", "MPC-Protect", "MPC+conformal", "CARMA", "CARMA-Perfect"]
+                         "savefig.bbox": "tight", "savefig.dpi": 300,
+                         "pdf.fonttype": 42, "ps.fonttype": 42})
+    pols = ["MPC", "MPC-Protect", "MPC+conformal", "CARMA", "CARMA-Perfect"]   # Scenario-MPC is run on a subset (Table)
     fig, ax = plt.subplots(figsize=(7.2, 2.9))
     w = 0.16
     for k, p in enumerate(pols):
@@ -99,7 +100,7 @@ def allf():
         for f in order:
             g = T[(T.fleet == f) & (T.rho == 0.5) & (T.policy == p)].iloc[0]
             mu.append(g.gap)
-        ax.bar(np.arange(len(order)) + (k - 2) * w, mu, w, color=A.PAL[p], label=p, edgecolor="none")
+        ax.bar(np.arange(len(order)) + (k - 2) * w, mu, w, color=A.PAL[p], label=p, hatch=A.HATCH[p], edgecolor="white", linewidth=0.3)
     ax.set_xticks(range(len(order))); ax.set_xticklabels(["Great\nBritain", "Europe", "United\nStates", "Brazil", "Four\ncontinents"])
     ax.set_ylabel("Gap to clairvoyant oracle (%)")
     ax.legend(frameon=False, fontsize=7, ncol=5, loc="upper center", bbox_to_anchor=(0.5, -0.22))

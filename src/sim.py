@@ -375,7 +375,7 @@ def late_unit_cost(ct, migrate=True):
 
 def oracle(jobs, t0, truth, migrate=True, acct=None):
     """Offline clairvoyant plan (known arrivals and CI). All jobs of the episode must be
-    served by their deadlines where capacity allows (unserved work is penalised at BIG),
+    served by their deadlines where capacity allows (unserved work is penalized at BIG),
     but only evaluated jobs (flag ev) carry emission costs in the objective, so the value
     is a lower bound on the evaluated emissions of any schedule that serves every job of
     the episode by its deadline. Migration restrictions are enforced as feasibility

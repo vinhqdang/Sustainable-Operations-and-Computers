@@ -1,0 +1,33 @@
+\section{Forecast evaluation}\label{app:forecast}
+
+Table~\ref{tab:forecast} and Fig.~\ref{fig:forecast}a summarize forecast accuracy in 2024; hours affected by gap filling are excluded. Averaged over horizons and sites, the direct GBM forecaster has a mean absolute error (MAE) of 31.7~gCO$_2$/kWh, against 35.3 for persistence and 40.9 for the seasonal-naive forecast. The advantage is largest at short and medium horizons: MAE falls by 23\% at 1 hour (6.4 against 8.3) and by 24\% at 6 hours (23.6 against 31.2). The advantage shrinks with the horizon, and at 24 hours the GBM is worse than both benchmarks (42.7 against 40.9). Without weather forecasts, day-ahead changes in wind output are hard to predict from the intensity history alone~\cite{maji2022carboncast}. By site, the improvement over persistence is largest in absolute terms for the volatile southern sites (West Midlands 50.2 against 57.7, London 38.0 against 43.4), although their MAE is also the highest. In South Scotland, where intensity is low and often flat, persistence is better overall (14.5 against 16.2). Diebold--Mariano tests~\cite{diebold1995comparing} with absolute-error loss and HAC variance confirm these patterns. For the three English sites, the GBM is significantly more accurate than persistence at horizons of 1--18 hours ($p\le0.002$) and indistinguishable at 24 hours ($p\ge0.09$). For South Scotland it is significantly better at 1 and 3 hours, indistinguishable at 6 hours and significantly worse from 12 hours onwards.
+
+\begin{table}[!htbp]
+\centering
+\caption{Forecast accuracy on the 2024 test year (MAE in gCO$_2$/kWh; mean over sites unless stated).}
+\label{tab:forecast}
+\small
+\begin{tabular}{lrrrrrrr}
+\toprule
+ & \multicolumn{5}{c}{Horizon $h$ (hours)} & \multicolumn{2}{c}{All horizons} \\
+\cmidrule(lr){2-6}\cmidrule(lr){7-8}
+Model & 1 & 3 & 6 & 12 & 24 & MAE & RMSE \\
+\midrule
+Persistence & 8.3 & 20.0 & 31.2 & 38.6 & \textbf{40.9} & 35.3 & 49.2 \\
+Seasonal naive (24 h) & 40.9 & 40.9 & 40.8 & 40.8 & \textbf{40.9} & 40.9 & 57.4 \\
+Direct GBM (this study) & \textbf{6.4} & \textbf{15.1} & \textbf{23.6} & \textbf{34.5} & 42.7 & \textbf{31.7} & \textbf{41.6} \\
+\bottomrule
+\end{tabular}
+
+\smallskip
+\parbox{0.92\textwidth}{\footnotesize MAE by site over all horizons (persistence / GBM): South Scotland 14.5 / 16.2; North West England 25.5 / 22.3; West Midlands 57.7 / 50.2; London 43.4 / 38.0.}
+\end{table}
+
+\begin{figure}[!htbp]
+\centering
+\includegraphics[width=\textwidth]{fig3_forecast.pdf}
+\caption{Forecast evaluation in 2024. (a) MAE by horizon, averaged over sites. (b) Empirical coverage of one-sided upper bounds $U^\beta$ against the target level $\beta$ for static split conformal calibration and adaptive conformal inference (ACI). Markers show the annual coverage and bars the range across the 12 months.}
+\label{fig:forecast}
+\end{figure}
+
+Calibration matters more than point accuracy for the risk-adjusted cost view, and Fig.~\ref{fig:forecast}b shows the effect of distribution shift. Static split-conformal bounds, calibrated on July--September 2023, under-cover in 2024 at every level: at $\beta=0.9$, annual coverage was 0.868 and monthly coverage ranged from 0.78 to 0.95. With the adaptive recalibration, annual coverage is within 0.003 of the target at all levels (0.499, 0.598, 0.697, 0.797 and 0.898). Monthly coverage stays within about four percentage points of the target (at most 4.2 points), and coverage is uniform across horizons. At $\beta=0.5$, the recalibrated median lies on average 10.3~gCO$_2$/kWh below the point forecast, which reflects the downward drift in intensity that the static model does not capture. Coverage is not the whole story. In pinball loss, the adaptive bounds improve on static calibration at levels 0.5--0.7 (15.01 against 15.16 at 0.5) but are worse at 0.8 and 0.9 (9.07 against 8.36 at 0.9). Delayed feedback explains much of this. The level for horizon $h$ is updated only when the outcome is observed, $h$ hours after issue, so a day of under-forecasts drives the level of long horizons toward 1 before any correction arrives. At $\beta=0.9$, 5.6\% of the 2024 bounds (0.5\% at $\beta=0.8$) were at the fallback ceiling, the training-period maximum of the site. These features, together with the finite ceiling and the quantile grid, are why we treat the procedure as an empirical recalibration and do not invoke the coverage guarantee of ACI~\cite{gibbs2021adaptive}. Annual coverage says nothing about conditional coverage in the site-hours that the optimizer selects.

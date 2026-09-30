@@ -3,7 +3,7 @@
 For each 2024 test week (rho = 0.5, migration allowed) the four sites form a
 pooling game: coalition S pools the capacity of its sites and serves the jobs
 submitted at them. We compute the hindsight value c(S) for all 15 coalitions,
-the dual (Owen) attribution, and the realised emissions of CARMA run by the grand
+the dual (Owen) attribution, and the realized emissions of CARMA run by the grand
 coalition and by every coalition on its own."""
 import itertools, json, multiprocessing as mp
 import numpy as np

@@ -2,7 +2,7 @@
 
 One direct gradient-boosted model per horizon (pooled over sites) predicts y[t+h]-y[t] for every site and
 horizon h=1..H from information available at issue time t. Horizon-wise split
-conformal calibration on held-out data (normalised by recent volatility) turns
+conformal calibration on held-out data (normalized by recent volatility) turns
 the point model into upper quantile forecasts at any level.
 """
 import sys, time, json

@@ -8,7 +8,8 @@ import matplotlib.pyplot as plt
 from common import *
 
 plt.rcParams.update({"font.family": "serif", "font.serif": ["Nimbus Roman", "DejaVu Serif"], "mathtext.fontset": "stix", "font.size": 9, "axes.spines.top": False,
-                     "axes.spines.right": False, "savefig.bbox": "tight", "savefig.dpi": 300})
+                     "axes.spines.right": False, "savefig.bbox": "tight", "savefig.dpi": 300,
+                     "pdf.fonttype": 42, "ps.fonttype": 42})
 
 
 def rstar(theta):
@@ -20,10 +21,10 @@ def rstar(theta):
 
 th = np.logspace(0, 3, 200)
 fig, ax = plt.subplots(figsize=(3.6, 3.3))
-ax.loglog(th, th, color="#d95f02", lw=1.6, label="Every on-time policy under (A1), CARMA included: $\\theta$ (Prop. 3)")
-ax.loglog(th, (1 + th) / 2, color="#1f78b4", lw=1.4, ls="--", label="Myopic MPC, worst case $\\geq(1+\\theta)/2$ (Thm 1)")
+ax.loglog(th, th, color="#D55E00", lw=1.6, label="Every on-time policy under (A1), CARMA included: $\\theta$ (Prop. 3)")
+ax.loglog(th, (1 + th) / 2, color="#0072B2", lw=1.4, ls="--", label="Myopic MPC, worst case $\\geq(1+\\theta)/2$ (Thm 1)")
 ax.loglog(th, [rstar(t) for t in th], color="0.2", lw=1.6, label="Any online algorithm without demand\ninformation, $R^*(\\theta)$ (Thm 1)")
-ax.loglog(th, np.ones_like(th), color="#d95f02", lw=1.2, ls=":",
+ax.loglog(th, np.ones_like(th), color="#D55E00", lw=1.2, ls=":",
           label="CARMA with exact demand and carbon\npredictions, under (A1)-(A2) (Thm 2)")
 ax.fill_between(th, [rstar(t) for t in th], (1 + th) / 2, color="0.9", zorder=0)
 ax.set_xlabel("Unit-emission-cost ratio $\\theta = U/L$"); ax.set_ylabel("Competitive ratio")
@@ -33,14 +34,14 @@ fig.savefig(FIG / "fig7_ratios.pdf"); plt.close(fig)
 site = pd.read_csv(RES / "fairness_sites.csv")
 order = ["South Scotland", "North West England", "West Midlands", "London"]
 fig, axs = plt.subplots(1, 2, figsize=(7.2, 2.6), sharey=True)
-for ax, game, title in zip(axs, ["hindsight", "online"], ["(a) Hindsight optimum", "(b) CARMA (realised)"]):
+for ax, game, title in zip(axs, ["hindsight", "online"], ["(a) Hindsight optimum", "(b) CARMA (realized)"]):
     g = site[site.game == game]
     x = np.arange(4); wdt = 0.18
     meths = ["Origin-based", "Host-based", "Shapley", "Dual (Theorem 3)"]
-    for k, (m, c) in enumerate(zip(meths, ["0.65", "#a6cee3", "#6a3d9a", "#d95f02"])):
+    for k, (m, c, h) in enumerate(zip(meths, ["0.6", "#56B4E9", "#CC79A7", "#D55E00"], ["", "////", "xxxx", ""])):
         v = g[g.method == m].set_index("site").loc[order].attributed
         lab = "Dual (Theorem 3); online: adjusted dual" if m.startswith("Dual") else m
-        ax.bar(x + (k - 1.5) * wdt, v.values, wdt, color=c, label=lab)
+        ax.bar(x + (k - 1.5) * wdt, v.values, wdt, color=c, label=lab, hatch=h, edgecolor="white", linewidth=0.3)
     sa = g[g.method == "Dual (Theorem 3)"].set_index("site").loc[order].standalone
     ax.scatter(x, sa.values, marker="_", s=500, color="k", lw=1.6, label="Stand-alone value", zorder=3)
     ax.axhline(0, color="0.5", lw=0.6)
@@ -72,14 +73,14 @@ def eb(ax, g, **kw):
 
 
 fig, axs = plt.subplots(1, 2, figsize=(7.2, 3.0))
-for pol, c, mk in [("MPC", "#1f78b4", "s"), ("CARMA", "#d95f02", "o")]:
+for pol, c, mk in [("MPC", "#0072B2", "s"), ("CARMA", "#D55E00", "o")]:
     for kind, ls, lab in [("sigma", "-", "i.i.d. noise"), ("corr", "--", "day-level correlated")]:
         g = r[(r.kind == kind) & (r.policy == pol)]
         if kind == "corr":
             g = pd.concat([r[(r.kind == "sigma") & (r.policy == pol) & (r.val == 0)], g])
         eb(axs[0], g.groupby("val").gap, fmt=mk + ls, color=c, ms=4, capsize=2, lw=1.4, label=f"{pol}, {lab}",
            mfc="white" if kind == "corr" else c)
-# the GBM forecaster placed at the i.i.d. noise level with the same realised MAE
+# the GBM forecaster placed at the i.i.d. noise level with the same realized MAE
 sig = np.array([0, 25, 50, 100, 200]); m_iid = np.r_[0, [mae[f"iid_{s_}"] for s_ in sig[1:]]]
 s_eq = float(np.interp(mae["GBM"], m_iid, sig))
 axs[0].axvline(s_eq, color="0.6", lw=0.8, ls=":")
@@ -87,12 +88,12 @@ axs[0].text(s_eq + 4, 1.0, f"GBM forecaster (MAE {mae['GBM']:.1f})", fontsize=6.
 axs[0].set_xlabel("Forecast noise $\\sigma$ (gCO$_2$/kWh)"); axs[0].set_ylabel("Gap to oracle (%)")
 axs[0].set_ylim(bottom=0); axs[0].set_title("(a) Carbon-forecast error", fontsize=9, loc="left")
 axs[0].legend(frameon=False, fontsize=6.5, ncol=2, loc="upper center", bbox_to_anchor=(0.5, -0.2))
-mu = eb(axs[1], r[r.kind == "scale"].groupby("val").gap, fmt="o-", color="#d95f02", ms=4, capsize=2, lw=1.4,
+mu = eb(axs[1], r[r.kind == "scale"].groupby("val").gap, fmt="o-", color="#D55E00", ms=4, capsize=2, lw=1.4,
         label="CARMA, profile scaled by $g$")
 sh = r[r.kind == "shift"].gap; c_ = ci(sh.values)
-axs[1].errorbar([1.0], [sh.mean()], yerr=[[sh.mean() - c_[0]], [c_[1] - sh.mean()]], fmt="D", color="#6a3d9a", ms=5,
+axs[1].errorbar([1.0], [sh.mean()], yerr=[[sh.mean() - c_[0]], [c_[1] - sh.mean()]], fmt="D", color="#CC79A7", ms=5,
                 capsize=2, label="CARMA, profile shifted 12 h")
-axs[1].axhline(mu.loc[0.0], color="#1f78b4", ls="--", lw=1, label="No anticipation ($g=0$, = MPC)")
+axs[1].axhline(mu.loc[0.0], color="#0072B2", ls="--", lw=1, label="No anticipation ($g=0$, = MPC)")
 axs[1].set_xlabel("Demand-profile scale $g$ (1 = unbiased)"); axs[1].set_ylabel("Gap to oracle (%)")
 axs[1].set_ylim(bottom=0); axs[1].set_title("(b) Demand-prediction error", fontsize=9, loc="left")
 axs[1].legend(frameon=False, fontsize=6.5, ncol=2, loc="upper center", bbox_to_anchor=(0.5, -0.2))

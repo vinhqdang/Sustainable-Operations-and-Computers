@@ -1,0 +1,19 @@
+Fig. 1. The CARMA decision loop. (a) Carbon-intensity forecasts price the job–hour to hour–site arcs; the selected configuration uses point forecasts, and conformal upper quantiles are an optional cost view. (b) A demand profile learned from past traces generates ghost jobs for expected arrivals. (c) Real jobs (solid) and ghost jobs (dashed) share one min-cost flow network, whose dotted slack arc carries unfinished work to the sink at the lateness penalty. The network is solved exactly every hour, and only the first-hour allocation of real jobs is executed.
+
+Fig. 2. Worst-case landscape as a function of the unit-emission-cost ratio θ=U/L. The curves refer to different information regimes. Without information about future demand, no online algorithm can lie below R*(θ), even with exact carbon forecasts (Theorem 1), and myopic MPC can be driven to (1+θ)/2. Given a backstop (A1), every policy that meets its deadlines, CARMA included, is within θ (Proposition 3). With exact predictions of both demand and carbon and an episode within the planning window (A1–A2), CARMA is optimal (Theorem 2).
+
+Fig. 3. Hourly carbon intensity of the four candidate sites (NESO regional data). (a) Monthly means, 2022–2024; the shaded area is the out-of-sample test year. (b) Mean diurnal profile in 2024 (UTC).
+
+Fig. 4. Validation results for the spatio-temporal regime (2023-Q4, mean over 13 weeks and three load levels). (a) Gap to the oracle as a function of the anticipation weight κ and look-ahead ℓ, using point forecasts. (b) Effect of the carbon cost view: conformal quantiles U^β against point forecasts, for myopic MPC and for CARMA (κ=1, ℓ=12).
+
+Fig. 5. Gap to the clairvoyant oracle. Mean over the 52 test weeks of 2024 (week means of three traces) with 95% moving-block bootstrap intervals, for MPC, MPC-Protect, MPC+conformal, Scenario-MPC (run in the spatio-temporal regime only), CARMA and CARMA-Perfect. ASAP-Local (gap 73–284% with migration, 10–22% without), Greedy-Spatial, Forecast-Reserve and MPC-Perfect are omitted for legibility and listed in Tables 3 and 4. Bar patterns repeat the legend colors.
+
+Fig. 6. Weekly results in 2024 (spatio-temporal regime, ρ=0.5, means of three traces). (a) Emission reduction relative to ASAP-Local. (b) Paired weekly gaps to the oracle; points below the diagonal are weeks in which CARMA outperforms MPC.
+
+Fig. 7. Gap to the clairvoyant oracle on five grids (ρ=0.5, migration allowed, 52 test weeks; Great Britain with three traces per week, the other fleets with two). Scenario-MPC, which was run on a subset of weeks, is shown in Table 7. Bar patterns repeat the legend colors.
+
+Fig. 8. Degradation under controlled prediction errors (13 test weeks of 2024, ρ=0.5, migration allowed; means with 95% confidence intervals). (a) Carbon-intensity forecasts replaced by the realized values plus Gaussian noise of standard deviation σ. The noise is either independent across issue times and horizons (solid) or shared by all forecasts of the same site and target day (dashed, open markers). (b) Demand profile scaled by g, or shifted by 12 hours so that arrivals are predicted at the wrong time of day.
+
+Fig. 9. Mean weekly carbon attribution by site under four rules, compared with each site's stand-alone value (black lines), 52 test weeks of 2024 at ρ=0.5. (a) Hindsight optimum. (b) CARMA's realized emissions. Negative values are net credits for contributing low-carbon capacity.
+
+Fig. B.1. Forecast evaluation in 2024. (a) MAE by horizon, averaged over sites. (b) Empirical coverage of one-sided upper bounds U^β against the target level β for static split conformal calibration and adaptive conformal inference (ACI). Markers show the annual coverage and bars the range across the 12 months.

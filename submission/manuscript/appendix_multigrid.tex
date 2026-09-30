@@ -1,0 +1,15 @@
+\section{Results on other grids at all loads}\label{app:multigrid}
+
+\begin{table}[!htbp]
+\centering
+\caption{Results on five grids at all loads (migration allowed; 52 test weeks of 2024). Gaps to the oracle (\%). Advantage: gap of the best baseline without demand information minus CARMA's gap, with a 95\% block-bootstrap CI (points). Late: CARMA's share of late work (\%).}
+\label{tab:multigrid_loads}
+\scriptsize\setlength{\tabcolsep}{2.5pt}
+\begin{tabular}{lrrrrrrlrr}
+\toprule
+Fleet & $\rho$ & \makecell{Oracle\\red.} & MPC & \makecell{MPC-\\Prot.} & \makecell{MPC+\\conf.} & CARMA & \makecell{Best baseline} & \makecell{Advantage (CI)} & Late \\
+\midrule
+\inputtable{table_multigrid_loads.tex}
+\bottomrule
+\end{tabular}
+\end{table}

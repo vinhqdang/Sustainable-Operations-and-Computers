@@ -1,4 +1,4 @@
-"""Horizon-wise normalised split-conformal upper quantiles with adaptive
+"""Horizon-wise normalized split-conformal upper quantiles with adaptive
 conformal inference (ACI) updates; produces forecast cubes C[t, s, h]."""
 import numpy as np
 import pandas as pd
@@ -36,7 +36,7 @@ def valid_pairs(T):
 
 
 def scores(idx, truth, pred, vol, a, b):
-    """Normalised residual scores (truth - pred)/scale for issue times t with both t and
+    """Normalized residual scores (truth - pred)/scale for issue times t with both t and
     the target t+h inside [a, b), so that no calibration outcome lies beyond b."""
     T = len(idx)
     ts = np.where((idx >= a) & (idx < b))[0]

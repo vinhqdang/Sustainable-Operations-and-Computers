@@ -1,6 +1,6 @@
 """Graceful degradation (incl. persistent, day-level correlated errors) of CARMA under controlled prediction errors (Section 4.6).
 
-(a) Carbon-forecast error: the forecast view is the realised intensity plus i.i.d.
+(a) Carbon-forecast error: the forecast view is the realized intensity plus i.i.d.
     Gaussian noise of standard deviation sigma (clipped at zero), for every issue
     time and horizon h >= 1.
 (b) Demand-prediction error: the learned demand profile is scaled by g (g = 1 is the
@@ -74,7 +74,7 @@ if __name__ == "__main__":
     with mp.Pool(4) as pool:
         rows = pool.map(task, specs, chunksize=1)
     d = pd.DataFrame(rows); d.to_csv(RES / "robustness.csv", index=False)
-    # realised MAE of the injected noise (after clipping at zero) and of the GBM
+    # realized MAE of the injected noise (after clipping at zero) and of the GBM
     # forecaster over the same issue times, so that the two can be put on one scale
     ts = np.concatenate([np.arange(t0, t0 + 168) for t0 in WEEKS])
     tr = CUBES["truth"][ts, :, 1:]

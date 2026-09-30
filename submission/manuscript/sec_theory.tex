@@ -1,0 +1,66 @@
+\section{Theoretical guarantees}\label{sec:theory}
+
+This section establishes a worst-case limit for \emph{every} online scheduler, prediction-dependent guarantees for CARMA, and a fairness property of the carbon attribution induced by the pooled scheduling problem. Proofs are in \appref{app:proofs}. Throughout, unit costs (Eq.~(\ref{eq:unitcost}), including any backstop resource introduced in Section~\ref{sec:guarantees}) satisfy $0<L\le c_{os}(t)\le U$, and $\theta=U/L$ is the \emph{unit-emission-cost ratio}. It refers to unit costs, which include energy use, PUE, transfer overheads and any backstop, not to grid intensities alone. Operational costs alone can be zero, because the hourly regional intensity of South Scotland is 0~gCO$_2$/kWh in 133 hours of our 2022--2024 data. A positive floor appears once the embodied emissions of the servers are allocated per server-hour, which is an accounting convention rather than a claim that scheduling avoids embodied emissions. As an illustration, a floor of 30~gCO$_2$e added to every unit cost, with the largest operational unit cost observed in 2024 (221~g), gives $\theta=251/30\approx 8.4$. An online algorithm is \emph{$\Gamma$-competitive} if its emissions never exceed $\Gamma$ times those of the clairvoyant oracle, for any arrival sequence and any intensity trajectory.
+
+\subsection{A universal lower bound under demand uncertainty}\label{sec:lb}
+
+Competitive analyses of carbon-aware scheduling model uncertainty about future \emph{prices}, that is, intensities, for a single workload. Examples are online search and one-way trading~\cite{elyaniv2001optimal}, the online pause-and-resume problem~\cite{lechowicz2023online}, and spatiotemporal allocation with deadlines (CarbonClipper)~\cite{lechowicz2025learning}. When several jobs share scarce low-carbon capacity, difficulty remains even when all prices are known in advance, because future \emph{demand} is unknown.
+
+\begin{theorem}[Lower bound]\label{thm:lb}
+Let $\theta>1$. No online algorithm (deterministic or randomized, with integral or fractional decisions) can be better than $R^*(\theta)$-competitive, even if it knows all future carbon intensities exactly, where
+\begin{equation}\label{eq:lb}
+R^*(\theta)=\max_{1\le p\le\theta}\left\{1+\frac{(p-1)(\theta-p)}{p^2-p-1+\theta}\right\}\;\ge\;1+\frac{\sqrt\theta\,(\sqrt\theta-1)^2}{2\theta-\sqrt\theta-1}\;=\;\Omega(\sqrt{\theta}).
+\end{equation}
+On the same family of instances, the competitive ratio of myopic receding-horizon scheduling (MPC) is at least $(1+\theta)/2$, a value approached as $p\to 1$.
+\end{theorem}
+For $\theta=1$ every schedule costs the same and $R^*(1)=1$; both expressions in (\ref{eq:lb}) tend to 1 as $\theta\downarrow 1$.
+
+The bound is established on a two-hour instance and is a quantitative version of Proposition~\ref{prop:myopic}, which treats the case $L=0$. Any algorithm must decide how much flexible work to run now at moderate cost before it learns whether an urgent job will claim the cheap capacity later. The adversary thus raises the effective price of the clean hour from $L$ to $U$. The resulting order, $\sqrt\theta$, is the same as for deterministic online min-search with unknown prices~\cite{elyaniv2001optimal}. The difference is where it comes from: here every price is known, and the loss is caused only by the unknown arrival of a competing job. For the illustrative $\theta\approx 8.4$ of Section~\ref{sec:theory}, $R^*=1.81$, whereas myopic MPC can be driven to $4.7$. For $\theta=100$ the values are $5.29$ and $50.5$. $R^*(\theta)$ is a lower bound derived from one family of instances; we do not know whether any online algorithm attains it. Theorem~\ref{thm:lb} is a worst-case statement, but it points in the same direction as the average-case evidence of Section~\ref{sec:res_main}. Carbon forecasts cannot substitute for information about demand, and this motivates the learning-augmented design of CARMA~\cite{lykouris2021competitive}.
+
+\subsection{Deadline safety, consistency and smoothness of CARMA}\label{sec:guarantees}
+
+We analyze CARMA under two assumptions.
+\begin{itemize}
+\item[(A1)] \emph{Backstop capacity.} In every hour, work may also run on a backstop resource of unlimited capacity at a unit cost in $[L,U]$, for example by bursting to a public-cloud region or to reserve servers at a carbon-intensive site. The backstop's unit cost is known in advance, or its forecast is clipped to $[L,U]$, so the planner never prices it above $U$. All jobs, real and predicted, are \emph{window-feasible}, $w_j\le m_j(d_j-a_j)$, and have windows of at most $H$ hours, so every planning problem contains all pending deadlines (this holds by construction in our workloads). The penalties satisfy $\Pi>U$ for real jobs and $\Pi_g\ge U$ for ghost jobs. The implementation enforces window-feasible ghost jobs (Section~\ref{sec:carma}) and sets $\Pi_g$ to 1.5 times the largest local unit cost, which exceeds every unit cost including transfer overheads.
+\item[(A2)] \emph{Episode within the planning window.} The episode $\{0,\dots,T-1\}$ has length $T\le H$, as for a daily batch window, so every planning problem extends to the end of the episode.
+\end{itemize}
+To measure prediction quality at hour $t$, let $F_t$ be the set of jobs that actually arrive after $t$, and $\hat F_t$ the ghost jobs used by CARMA. Jobs are compared after splitting them into \emph{atoms} with proportional widths, which leaves every planning problem unchanged (\appref{app:proofs}). Let $d_t$ be the smallest total work of atoms that must be added to or removed from $\hat F_t$ to obtain $F_t$. Let $\varepsilon_t=\max_{\tau>t,o,s}|\hat c_{os}(\tau\,|\,t)-c_{os}(\tau)|$ be the carbon-cost forecast error, and $W_t$ the total work pending at $t$ plus the larger of the true and predicted future work.
+
+\begin{proposition}[Baseline robustness]\label{prop:robust}
+Under (A1), every policy that completes all work by its deadlines is $\theta$-competitive.
+\end{proposition}
+
+\begin{theorem}[Guarantees for CARMA]\label{thm:carma}
+Under (A1), for any arrival sequence and any predictions, CARMA completes every job by its deadline (\emph{deadline safety}) and is therefore $\theta$-competitive. If (A2) also holds, then
+\begin{equation}\label{eq:smooth}
+\mathrm{ALG}\;\le\;\min\Big\{\theta\cdot\mathrm{OPT},\;\;\mathrm{OPT}+\sum_{t=0}^{T-1}\big[(U-L)\,d_t+2\,\varepsilon_t\,W_t\big]\Big\}.
+\end{equation}
+In particular, CARMA is optimal with exact predictions ($d_t=\varepsilon_t=0$), which is \emph{consistency}, and its excess emissions grow at most linearly in the prediction errors, which is \emph{smoothness}.
+\end{theorem}
+
+These properties should be read with care. Robustness by itself does not distinguish CARMA: by Proposition~\ref{prop:robust} it holds for any policy that meets its deadlines. What CARMA adds is deadline safety under \emph{arbitrary} ghost predictions, together with consistency and smoothness. Deadline safety holds because ghost jobs carry a softer penalty than real jobs and the backstop can always absorb real work, so a misprediction can divert real work to dirtier capacity but never make it late. Without a backstop this is no longer true. With one server and two hours, a flexible job that could run in the first hour may be deferred to a cleaner second hour, and an unexpected urgent job in the second hour then makes one of them late, although an offline schedule meets both deadlines. A soft ghost penalty does not create capacity. ``Exact predictions'' in the theorem means exact predictions of both demand and carbon; the CARMA-Perfect variant of the experiments has perfect carbon forecasts but still uses the average demand profile and a finite look-ahead, so it is not the case $d_t=0$. The smoothness term charges demand errors at the spread $U-L$ of unit costs, not at the lateness penalty. The term is informative when predictions are close to the realized demand. For random arrivals, however, an expected-value profile never matches the realized jobs exactly. Moreover, each misprediction enters $d_t$ in every epoch in which it is visible, so the bound in (\ref{eq:smooth}) can be loose. In the main experiments, assumption (A2) is not satisfied (weekly episodes with $H=24$~h), no backstop is modeled, and some hours have zero operational cost. The theorem therefore describes an idealized setting and does not certify the reported numbers; the degradation profile in the weekly experiments is tested empirically in Section~\ref{sec:res_robust}. \appref{app:thm2check} checks the theorem numerically in one-day episodes that do satisfy (A1) and (A2). Robustness $\theta$ is also far from the $\Omega(\sqrt\theta)$ lower bound. Closing this gap while retaining consistency is left for future work, for example by protecting deferral decisions with reservation prices~\cite{elyaniv2001optimal,lechowicz2025learning}. Fig.~\ref{fig:ratios} summarizes the worst-case landscape.
+
+\begin{figure}[!htbp]
+\centering
+\includegraphics[width=0.62\textwidth]{fig7_ratios.pdf}
+\caption{Worst-case landscape as a function of the unit-emission-cost ratio $\theta=U/L$. The curves refer to different information regimes. Without information about future demand, no online algorithm can lie below $R^*(\theta)$, even with exact carbon forecasts (Theorem~\ref{thm:lb}), and myopic MPC can be driven to $(1+\theta)/2$. Given a backstop (A1), every policy that meets its deadlines, CARMA included, is within $\theta$ (Proposition~\ref{prop:robust}). With exact predictions of \emph{both} demand and carbon and an episode within the planning window (A1--A2), CARMA is optimal (Theorem~\ref{thm:carma}).}
+\label{fig:ratios}
+\end{figure}
+
+\subsection{Fair carbon attribution among sites}\label{sec:fair}
+
+Pooling capacity reduces total emissions but redistributes them. Work submitted in London is executed in South Scotland, and Scottish jobs may be displaced by it. The organizations that operate the sites, or the business units that submit the jobs, therefore need an attribution of the pooled emissions that each of them can accept. This is an \emph{internal} allocation problem, like carbon transfer pricing between units. It is distinct from external GHG Protocol reporting, where Scope~2 emissions are reported by the entity that consumes the electricity~\cite{ghg2015scope2}.
+
+We model the allocation as a cooperative game. The players are the sites $\mathcal S$. A coalition $C\subseteq\mathcal S$ pools the capacity of its sites and serves the jobs submitted at them. Its stand-alone value $c(C)$ is the optimum of (\ref{eq:obj})--(\ref{eq:cap}) restricted to those jobs and sites, which includes the lateness penalty if the coalition cannot serve its own jobs on time. An attribution $\phi\in\mathbb{R}^{|\mathcal S|}$ is \emph{budget-balanced} if $\sum_o\phi_o=c(\mathcal S)$. It is in the \emph{core} if $\sum_{o\in C}\phi_o\le c(C)$ for every coalition $C$. A core attribution gives no group of sites a reason to leave the pool and schedule on its own.
+
+Let $(\lambda,\nu,\mu)$ be optimal dual variables of the grand-coalition problem: $\lambda_j$ for the work constraint (\ref{eq:work}), $\nu_{jt}\le 0$ for the width constraint (\ref{eq:width}) and $\mu_{st}\le 0$ for the capacity constraint (\ref{eq:cap}). The \emph{dual carbon attribution} is
+\begin{equation}\label{eq:phi}
+\phi_o=\sum_{j:\,o_j=o}\Big(\lambda_j w_j+\sum_t \nu_{jt}m_j\Big)+\sum_t\mu_{ot}K_o(t).
+\end{equation}
+Site $o$ is charged the carbon shadow price of the work it submits and is credited ($\mu\le 0$) with the shadow value of the capacity it contributes. A site whose clean capacity is worth more than the emissions of its own jobs therefore receives a net credit, that is, a negative internal charge.
+
+\begin{theorem}[Core-stable carbon attribution]\label{thm:core}
+The attribution (\ref{eq:phi}) is budget-balanced and in the core of the pooling game. In particular, it is individually rational: no site is charged more than its stand-alone optimum $c(\{o\})$.
+\end{theorem}
+
+The result follows from Owen's theorem on linear production games~\cite{owen1975core}; games defined by network flows are known to be totally balanced~\cite{kalai1982totally}. It concerns the penalized hindsight game defined in Section~\ref{sec:fair}. Core stability is one requirement of an acceptable allocation; it does not imply uniqueness, incentive compatibility or other notions of fairness, and it does not extend automatically to the realized emissions of an online policy. The duals are those of the hindsight problem, which suits after-the-fact accounting. They are available as the optimal node potentials of the min-cost flow; in our experiments we obtain them from an LP solver. Optimal duals need not be unique, so Section~\ref{sec:res_fair} reports the range of (\ref{eq:phi}) over all optimal duals. It also compares the dual attribution with the Shapley value~\cite{shapley1953value}, which is budget-balanced but not guaranteed to lie in the core, and with simpler rules. The simpler rules are \emph{origin-based} (each site is charged the emissions of its own jobs wherever they ran), \emph{host-based} (each site is charged the emissions of the work it executes, the analog of location-based Scope~2 reporting), and proportional rules.

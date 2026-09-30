@@ -2,7 +2,7 @@
 
 Games: (i) hindsight LP value c(C) (Theorem 3; includes the lateness penalty if a
 coalition cannot serve its own jobs on time), (ii) hindsight emissions only, and
-(iii) the realised emissions of CARMA operated by each coalition (online game).
+(iii) the realized emissions of CARMA operated by each coalition (online game).
 Attributions: origin-based (each site charged its jobs' emissions wherever they ran),
 host-based (each site charged the emissions of the work it executes, the analogue of
 GHG Protocol location-based Scope 2), work-proportional, proportional to stand-alone
@@ -98,9 +98,9 @@ if len(rg):
     pd.Series(json_out).to_json(RES / "fairness_dual_range.json")
     print(json_out)
 lines = []
-for game, lab in [("hindsight", "(a) Hindsight, penalised cost"),
+for game, lab in [("hindsight", "(a) Hindsight, penalized cost"),
                   ("emissions-only", "(b) Hindsight, emissions only"),
-                  ("online", "(c) CARMA, realised emissions")]:
+                  ("online", "(c) CARMA, realized emissions")]:
     ms = [m for m in ["Origin-based", "Host-based", "Work-proportional", "Stand-alone proportional", "Shapley",
                       "Dual (Theorem 3)"] if ((summ.game == game) & (summ.method == m)).any()]
     lines.append(f"\\multicolumn{{6}}{{l}}{{\\emph{{{lab}}}}}\\\\")

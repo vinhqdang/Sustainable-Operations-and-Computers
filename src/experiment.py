@@ -7,7 +7,7 @@ from sim import *
 
 IDX, TRUTH, CUBES, VOL = load_cubes()
 T = len(IDX)
-# clairvoyant cube: the realised intensities for every horizon
+# clairvoyant cube: the realized intensities for every horizon
 _hi = np.minimum(np.arange(T)[:, None] + np.arange(H + 1)[None, :], T - 1)
 CUBES["truth"] = np.transpose(TRUTH[_hi], (0, 2, 1))
 LEVELS = [0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.85, 0.9, 0.95]
@@ -36,7 +36,7 @@ def profile_for(rho, urgent=0.3):
 
 
 def marginal_factor():
-    """Stylised marginal emission factor (gCO2/kWh) for GB (Section 5.7): gas CCGT is
+    """Stylized marginal emission factor (gCO2/kWh) for GB (Section 5.7): gas CCGT is
     the marginal plant (394 g/kWh) except in hours with evident surplus low-carbon
     generation. A Scottish site is treated as marginally zero-carbon when Scotland
     is nearly carbon-free while the rest of GB is not (a proxy for export-constrained,

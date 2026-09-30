@@ -6,7 +6,7 @@ the gap to the oracle between a policy and CARMA. Confidence intervals and two-s
 p-values come from a moving-block bootstrap over weeks (block length 4; 5000 draws
 for intervals, 100000 for p-values, so that Holm-adjusted p-values can fall below 0.001),
 which respects the serial correlation of consecutive weeks; the p-value is the share
-of bootstrap means of the centred series at least as far from zero as the observed
+of bootstrap means of the centered series at least as far from zero as the observed
 mean. p-values are Holm-adjusted jointly over all comparisons of the main experiment
 (both regimes and all loads), and separately for the trace and sensitivity sets.
 Block lengths 2 and 8 are reported as a sensitivity check."""
@@ -21,13 +21,18 @@ from common import *
 
 plt.rcParams.update({"font.family": "serif", "font.serif": ["Nimbus Roman", "Times New Roman", "DejaVu Serif"],
                      "mathtext.fontset": "stix", "font.size": 9, "axes.spines.top": False,
-                     "axes.spines.right": False, "savefig.bbox": "tight", "savefig.dpi": 300})
+                     "axes.spines.right": False, "savefig.bbox": "tight", "savefig.dpi": 300,
+                     "pdf.fonttype": 42, "ps.fonttype": 42})
 ORDER = ["ASAP-Local", "Greedy-Spatial", "Forecast-Reserve", "MPC", "MPC-Protect", "MPC+conformal",
          "MPC-Perfect", "Scenario-MPC", "CARMA", "CARMA+conformal", "CARMA-Perfect", "Oracle"]
-PAL = {"ASAP-Local": "0.75", "Greedy-Spatial": "0.55", "Forecast-Reserve": "#a6cee3", "MPC": "#1f78b4",
-       "MPC-Protect": "#33a02c", "MPC+conformal": "#6a3d9a", "MPC-Perfect": "#b2df8a", "CARMA": "#d95f02",
-       "CARMA+conformal": "#fdbf6f", "CARMA-Perfect": "#e31a1c", "Oracle": "0.1",
-       "CARMA (in-sample profile)": "#fb9a99", "Scenario-MPC": "#8c510a"}
+# Color-blind-safe categorical palette (Okabe and Ito), validated for adjacent-pair CVD separation;
+# hatches, markers and line styles provide the secondary encoding.
+PAL = {"ASAP-Local": "0.65", "Greedy-Spatial": "0.45", "Forecast-Reserve": "0.3", "MPC": "#0072B2",
+       "MPC-Protect": "#009E73", "MPC+conformal": "#CC79A7", "MPC-Perfect": "#56B4E9", "Scenario-MPC": "#56B4E9",
+       "CARMA": "#D55E00", "CARMA+conformal": "#E69F00", "CARMA-Perfect": "#E69F00", "Oracle": "0.1",
+       "CARMA (in-sample profile)": "#E69F00"}
+HATCH = {"MPC": "", "MPC-Protect": "////", "MPC+conformal": "xxxx", "Scenario-MPC": "....", "CARMA": "",
+         "CARMA-Perfect": "\\\\\\\\"}
 KEY = ["experiment", "migrate", "rho", "t0", "rep"]
 
 
@@ -149,11 +154,10 @@ def decomposition(tab):
 
 def fig_gap(d):
     fig, axs = plt.subplots(1, 2, figsize=(7.2, 2.8))
-    pols = ["Greedy-Spatial", "Forecast-Reserve", "MPC", "MPC-Protect", "MPC+conformal", "MPC-Perfect",
-            "Scenario-MPC", "CARMA", "CARMA+conformal", "CARMA-Perfect"]
+    pols = ["MPC", "MPC-Protect", "MPC+conformal", "Scenario-MPC", "CARMA", "CARMA-Perfect"]
     for ax, mig in zip(axs, [True, False]):
         g = d[d.migrate == mig]
-        pl = [p for p in pols if (g.label == p).any() and (mig or p != "Greedy-Spatial")]
+        pl = [p for p in pols if (g.label == p).any()]
         w = 0.8 / len(pl)
         for k, p in enumerate(pl):
             wk = g[g.label == p].groupby(["rho", "t0"]).gap.mean()
@@ -162,24 +166,25 @@ def fig_gap(d):
                 v = wk.loc[rho].sort_index().values
                 c = block_boot(v); mu.append(v.mean()); lo.append(v.mean() - c[0]); hi.append(c[1] - v.mean())
             x = np.arange(3) + (k - (len(pl) - 1) / 2) * w
-            ax.bar(x, mu, w, yerr=[lo, hi], color=PAL[p], label=p,
-                   error_kw=dict(lw=0.6, capsize=1.2), edgecolor="none")
+            ax.bar(x, mu, w, yerr=[lo, hi], color=PAL[p], label=p, hatch=HATCH[p],
+                   error_kw=dict(lw=0.6, capsize=1.2), edgecolor="white", linewidth=0.3)
         ax.set_xticks(range(3)); ax.set_xticklabels([f"$\\rho$ = {r}" for r in [0.3, 0.5, 0.7]])
         ax.set_ylabel("Gap to clairvoyant oracle (%)")
         ax.set_title("(a) Spatio-temporal (migration allowed)" if mig else "(b) Temporal-only (no migration)",
                      fontsize=9, loc="left")
     h, l = axs[0].get_legend_handles_labels()
-    fig.legend(h, l, frameon=False, fontsize=7, ncol=5, loc="lower center", bbox_to_anchor=(0.5, -0.2))
+    fig.legend(h, l, frameon=False, fontsize=7, ncol=6, loc="lower center", bbox_to_anchor=(0.5, -0.12))
     fig.savefig(FIG / "fig4_gap.pdf"); plt.close(fig)
 
 
 def fig_weekly(d):
     g = d[(d.migrate == True) & (d.rho == 0.5)]
     fig, ax = plt.subplots(1, 2, figsize=(7.2, 2.6), gridspec_kw={"width_ratios": [1.7, 1]})
+    LS = {"Greedy-Spatial": ":", "MPC": "--", "MPC-Protect": "-.", "CARMA": "-", "Oracle": (0, (1, 1))}
     for p in ["Greedy-Spatial", "MPC", "MPC-Protect", "CARMA", "Oracle"]:
         x = g[g.label == p].groupby("week").red.mean()
         ax[0].plot(pd.to_datetime(x.index), x.values, color=PAL[p],
-                   lw=1.3 if p != "Oracle" else 1.0, ls="--" if p == "Oracle" else "-", label=p)
+                   lw=1.6 if p == "CARMA" else 1.1, ls=LS[p], label=p)
     ax[0].set_ylabel("Reduction vs ASAP-Local (%)")
     ax[0].legend(frameon=False, fontsize=7, ncol=5, loc="lower center", bbox_to_anchor=(0.5, -0.33))
     ax[0].xaxis.set_major_locator(mdates.MonthLocator(bymonth=[1, 3, 5, 7, 9, 11]))
@@ -203,8 +208,8 @@ def fig_tuning():
     fig, ax = plt.subplots(1, 2, figsize=(7.2, 2.6))
     s1 = d[(d.policy == "CARMA") & (d.cube == "pred")].groupby(["kappa", "look"]).gap.mean().unstack()
     mpc = d[(d.policy == "MPC") & (d.cube == "pred")].gap.mean()
-    for L, c in zip(s1.columns, ["#fdae6b", "#e6550d", "#a63603"]):
-        ax[0].plot(s1.index, s1[L], "o-", color=c, ms=3.5, lw=1.3, label=f"look-ahead $\\ell$ = {int(L)} h")
+    for L, c, mk, ls in zip(s1.columns, ["#F2A777", "#D55E00", "#7A3300"], ["o", "s", "^"], ["-", "--", "-."]):
+        ax[0].plot(s1.index, s1[L], mk + ls, color=c, ms=3.5, lw=1.3, label=f"look-ahead $\\ell$ = {int(L)} h")
     ax[0].axhline(mpc, color=PAL["MPC"], ls="--", lw=1, label="MPC ($\\kappa$ = 0)")
     ax[0].set_xlabel("Anticipation weight $\\kappa$"); ax[0].set_ylabel("Validation gap to oracle (%)")
     ax[0].legend(frameon=False, fontsize=7, loc="center right", bbox_to_anchor=(1.0, 0.62))
@@ -215,7 +220,7 @@ def fig_tuning():
         lv = g[g.cube.str.startswith("q")].groupby("cube").gap.mean()
         xs = [int(k[1:]) / 100 for k in lv.index]
         o = np.argsort(xs)
-        ax[1].plot(np.array(xs)[o], lv.values[o], "o-", color=c, ms=3.5, lw=1.3, label=f"{pol}, conformal $U^\\beta$")
+        ax[1].plot(np.array(xs)[o], lv.values[o], "o-" if pol == "CARMA" else "s--", color=c, ms=3.5, lw=1.3, label=f"{pol}, conformal $U^\\beta$")
         ax[1].axhline(g[g.cube == "pred"].gap.mean(), color=c, ls=":", lw=1.2, label=f"{pol}, point forecast")
     ax[1].set_xlabel("Conformal level $\\beta$"); ax[1].set_ylabel("Validation gap to oracle (%)")
     ax[1].legend(frameon=False, fontsize=6.5); ax[1].set_title("(b) Carbon cost view", fontsize=9, loc="left")
