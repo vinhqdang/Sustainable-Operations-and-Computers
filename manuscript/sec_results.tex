@@ -12,7 +12,7 @@ Fig.~\ref{fig:data} shows the regional intensities. Over 2022--2024, mean intens
 \label{fig:data}
 \end{figure}
 
-The forecaster was trained on 1.24 million (issue time, site, horizon) samples in about one minute. In 2024 its mean absolute error (MAE), averaged over horizons and sites, is 31.7~gCO$_2$/kWh, against 35.3 for persistence and 40.9 for a seasonal-naive forecast. The advantage is 23--25\% at horizons of 1--6 hours, and the difference is significant at all English sites up to 18 hours in Diebold--Mariano tests~\cite{diebold1995comparing}. Day-ahead skill is limited, because no weather inputs are used. Adaptive recalibration keeps the annual coverage of the upper bounds within 0.003 of target despite the 2024 decarbonisation drift. Appendix~\ref{app:forecast} gives the full evaluation (accuracy by horizon and site, coverage, pinball loss).
+The forecaster was trained on 1.24 million (issue time, site, horizon) samples in about one minute. In 2024 its mean absolute error (MAE), averaged over horizons and sites, is 31.7~gCO$_2$/kWh, against 35.3 for persistence and 40.9 for a seasonal-naive forecast. The advantage is 23--25\% at horizons of 1--6 hours, and the difference is significant at all English sites up to 18 hours in Diebold--Mariano tests~\cite{diebold1995comparing}. Day-ahead skill is limited, because no weather inputs are used. Adaptive recalibration keeps the annual coverage of the upper bounds within 0.003 of target despite the 2024 decarbonisation drift. \appref{app:forecast} gives the full evaluation (accuracy by horizon and site, coverage, pinball loss).
 
 \FloatBarrier
 \subsection{Hyperparameter tuning}\label{sec:tuning}
