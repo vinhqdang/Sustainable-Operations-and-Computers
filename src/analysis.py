@@ -145,8 +145,8 @@ def fig_weekly(d):
     g = d[(d.migrate == True) & (d.rho == 0.5)]
     fig, ax = plt.subplots(1, 2, figsize=(7.2, 2.6), gridspec_kw={"width_ratios": [1.7, 1]})
     for p in ["Greedy-Spatial", "MPC", "MPC-Protect", "CARMA", "Oracle"]:
-        x = g[g.label == p].groupby("t0").red.mean()
-        ax[0].plot(pd.to_datetime([str(IDX[t].date()) for t in x.index]), x.values, color=PAL[p],
+        x = g[g.label == p].groupby("week").red.mean()
+        ax[0].plot(pd.to_datetime(x.index), x.values, color=PAL[p],
                    lw=1.3 if p != "Oracle" else 1.0, ls="--" if p == "Oracle" else "-", label=p)
     ax[0].set_ylabel("Reduction vs ASAP-Local (%)")
     ax[0].legend(frameon=False, fontsize=7, ncol=5, loc="lower center", bbox_to_anchor=(0.5, -0.33))

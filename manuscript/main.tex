@@ -6,6 +6,8 @@
 \usepackage[hidelinks]{hyperref}
 \usepackage{lineno}
 \usepackage{xcolor}
+\usepackage{microtype}
+\setlength{\emergencystretch}{2em}
 
 \newtheorem{proposition}{Proposition}
 \newtheorem{theorem}{Theorem}
@@ -28,11 +30,11 @@
             country={Vietnam}}
 
 \begin{abstract}
-Shifting deferrable jobs to cleaner hours and locations cuts data-centre emissions, but online schedulers must act before future grid conditions and jobs are known. This paper formulates multi-site, deadline-constrained scheduling of bag-of-tasks jobs as a minimum-cost flow problem and proposes CARMA (Carbon-aware Anticipatory Receding-horizon Multi-site Allocation). CARMA adds ``ghost jobs'' for expected arrivals to each hourly plan and uses a 1--24-hour carbon-intensity forecaster with adaptive conformal calibration. Three guarantees are proved. First, uncertainty about demand forces any online algorithm, even one with perfect carbon forecasts, to a competitive ratio of order $\sqrt{\theta}$, where $\theta$ is the ratio of the highest to the lowest unit emission; myopic planning is worse, at $(1+\theta)/2$. Second, given backstop capacity, CARMA never misses a deadline and is $\theta$-competitive under any predictions, is optimal under exact predictions, and degrades linearly with prediction error. Third, dual prices of the pooled problem yield a carbon attribution among sites that lies in the core, so no coalition gains by leaving. On three years of regional grid data for Great Britain, with 52 out-of-sample weeks in 2024, CARMA reduces emissions by 36--68\% relative to carbon-agnostic operation when migration is allowed. It comes within 5.8--8.7\% of the clairvoyant optimum, against 17.6--21.5\% for myopic control, and lowers late work. Anticipating demand is worth more than perfect carbon foresight, and CARMA degrades gracefully under injected errors. Location-based carbon accounting violates coalitional stability in every test week, whereas the dual attribution satisfies it exactly in hindsight and in over 99\% of checks online.
+Shifting deferrable jobs to cleaner hours and locations cuts data-centre emissions, but online schedulers act before future grid conditions and jobs are known. We formulate multi-site, deadline-constrained scheduling of bag-of-tasks jobs as a minimum-cost flow problem and propose CARMA (Carbon-aware Anticipatory Receding-horizon Multi-site Allocation), which adds ``ghost jobs'' for expected arrivals to each hourly plan. We prove that uncertainty about demand alone forces any online algorithm, even one with perfect carbon forecasts, to a competitive ratio of $\Omega(\sqrt{\theta})$, where $\theta$ is the ratio of the highest to the lowest unit emission, and myopic planning to at least $(1+\theta)/2$. Given backstop capacity, CARMA never misses a deadline under any predictions, is optimal under exact predictions and degrades linearly with prediction error. Dual prices of the pooled problem yield a carbon attribution among sites that lies in the core. On 2024 regional grid data for Great Britain, CARMA comes within 8.0--9.8\% of the clairvoyant optimum, against 15--16\% for the best myopic, protection-level or risk-averse baseline and 19--23\% for plain model-predictive control, and cuts attributional emissions by 36--68\% relative to carbon-agnostic operation. On a real cluster trace with a demand profile learned from different days, its gap is 20.7\% against 26.7--36.1\%. Anticipating demand is worth more than perfect carbon foresight. Under stylised marginal-emission accounting, achievable reductions shrink to 14\% and CARMA's edge becomes small, so physical savings depend on curtailed low-carbon supply. Origin- and host-based carbon accounting violate coalitional stability in every week, whereas the dual attribution never does in hindsight.
 \end{abstract}
 
 \begin{keyword}
-Carbon-aware computing \sep Data centre scheduling \sep Model predictive control \sep Minimum-cost flow \sep Conformal prediction \sep Carbon intensity forecasting
+Carbon-aware computing \sep Data centre scheduling \sep Competitive analysis \sep Minimum-cost flow \sep Cooperative cost allocation \sep Carbon intensity forecasting
 \end{keyword}
 
 \end{frontmatter}

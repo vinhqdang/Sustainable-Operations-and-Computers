@@ -33,10 +33,11 @@ order = ["South Scotland", "North West England", "West Midlands", "London"]
 fig, axs = plt.subplots(1, 2, figsize=(7.2, 2.6), sharey=True)
 for ax, game, title in zip(axs, ["hindsight", "online"], ["(a) Hindsight optimum", "(b) CARMA (realised)"]):
     g = site[site.game == game]
-    x = np.arange(4); wdt = 0.2
-    for k, (m, c) in enumerate(zip(["Location-based", "Work-proportional", "Dual (Theorem 3)"], ["0.65", "#a6cee3", "#d95f02"])):
+    x = np.arange(4); wdt = 0.18
+    meths = ["Origin-based", "Host-based", "Shapley", "Dual (Theorem 3)"]
+    for k, (m, c) in enumerate(zip(meths, ["0.65", "#a6cee3", "#6a3d9a", "#d95f02"])):
         v = g[g.method == m].set_index("site").loc[order].attributed
-        ax.bar(x + (k - 1) * wdt, v.values, wdt, color=c, label=m)
+        ax.bar(x + (k - 1.5) * wdt, v.values, wdt, color=c, label=m)
     sa = g[g.method == "Dual (Theorem 3)"].set_index("site").loc[order].standalone
     ax.scatter(x, sa.values, marker="_", s=500, color="k", lw=1.6, label="Stand-alone value", zorder=3)
     ax.axhline(0, color="0.5", lw=0.6)
@@ -44,20 +45,25 @@ for ax, game, title in zip(axs, ["hindsight", "online"], ["(a) Hindsight optimum
     ax.set_title(title, fontsize=9, loc="left")
 axs[0].set_ylabel("Mean weekly attribution (tCO$_2$)")
 h, l = axs[0].get_legend_handles_labels()
-fig.legend(h, l, frameon=False, fontsize=7, ncol=4, loc="lower center", bbox_to_anchor=(0.5, -0.16))
+fig.legend(h, l, frameon=False, fontsize=7, ncol=5, loc="lower center", bbox_to_anchor=(0.5, -0.16))
 fig.savefig(FIG / "fig9_fairness.pdf"); plt.close(fig)
 print("ok")
 
 r = pd.read_csv(RES / "robustness.csv")
 fig, axs = plt.subplots(1, 2, figsize=(7.2, 2.6))
 for pol, c, mk in [("MPC", "#1f78b4", "s"), ("CARMA", "#d95f02", "o")]:
-    g = r[(r.kind == "sigma") & (r.policy == pol)].groupby("val").gap
-    axs[0].errorbar(g.mean().index, g.mean().values, yerr=1.96 * g.std().values / np.sqrt(g.count().values),
-                    fmt=mk + "-", color=c, ms=4, capsize=2, lw=1.4, label=pol)
+    for kind, ls, lab in [("sigma", "-", "i.i.d. noise"), ("corr", "--", "day-level correlated")]:
+        g = r[(r.kind == kind) & (r.policy == pol)]
+        if kind == "corr":
+            g = pd.concat([r[(r.kind == "sigma") & (r.policy == pol) & (r.val == 0)], g])
+        g = g.groupby("val").gap
+        axs[0].errorbar(g.mean().index, g.mean().values, yerr=1.96 * g.std().values / np.sqrt(g.count().values),
+                        fmt=mk + ls, color=c, ms=4, capsize=2, lw=1.4, label=f"{pol}, {lab}",
+                        mfc="white" if kind == "corr" else c)
 axs[0].axvline(31.2, color="0.6", lw=0.8, ls=":")
-axs[0].text(35, 11, "MAE of the\nGBM forecaster", fontsize=7, color="0.4")
+axs[0].text(35, 1.5, "MAE of the GBM forecaster", fontsize=7, color="0.4")
 axs[0].set_xlabel("Forecast noise $\\sigma$ (gCO$_2$/kWh)"); axs[0].set_ylabel("Gap to oracle (%)")
-axs[0].legend(frameon=False, fontsize=7.5); axs[0].set_title("(a) Carbon-forecast error", fontsize=9, loc="left")
+axs[0].legend(frameon=False, fontsize=6.5, loc="upper left"); axs[0].set_ylim(0, 40); axs[0].set_title("(a) Carbon-forecast error", fontsize=9, loc="left")
 g = r[r.kind == "scale"].groupby("val").gap
 axs[1].errorbar(g.mean().index, g.mean().values, yerr=1.96 * g.std().values / np.sqrt(g.count().values),
                 fmt="o-", color="#d95f02", ms=4, capsize=2, lw=1.4, label="CARMA, profile scaled by $g$")

@@ -1,25 +1,57 @@
 game,method,site,attributed,standalone
+emissions-only,Dual (Theorem 3),London,2.8131747975086077,3.8468288395130696
+emissions-only,Dual (Theorem 3),North West England,-0.020975932059389583,0.592106766720355
+emissions-only,Dual (Theorem 3),South Scotland,-0.9078017646172776,0.14566196485931165
+emissions-only,Dual (Theorem 3),West Midlands,1.4848068034617694,2.0039496796283673
+emissions-only,Shapley,London,2.755438971186717,3.8468288395130696
+emissions-only,Shapley,North West England,-0.04011442073709272,0.592106766720355
+emissions-only,Shapley,South Scotland,-0.7572795492551021,0.14566196485931165
+emissions-only,Shapley,West Midlands,1.4111589030991887,2.0039496796283673
 hindsight,Dual (Theorem 3),London,2.8131747975086085,3.9118644976590202
 hindsight,Dual (Theorem 3),North West England,-0.020975932059389694,0.5921067667203551
 hindsight,Dual (Theorem 3),South Scotland,-0.9078017646172781,0.14566196485931163
 hindsight,Dual (Theorem 3),West Midlands,1.48480680346177,2.046334848811815
-hindsight,Location-based,London,1.607883745332386,3.9118644976590202
-hindsight,Location-based,North West England,0.6670931415167375,0.5921067667203551
-hindsight,Location-based,South Scotland,0.17275990718179873,0.14566196485931163
-hindsight,Location-based,West Midlands,0.9214671102627888,2.046334848811815
+hindsight,Host-based,London,0.6886617451639252,3.9118644976590202
+hindsight,Host-based,North West England,1.5043801929656127,0.5921067667203551
+hindsight,Host-based,South Scotland,0.7181514516634716,0.14566196485931163
+hindsight,Host-based,West Midlands,0.45801051450070146,2.046334848811815
+hindsight,Origin-based,London,1.607883745332386,3.9118644976590202
+hindsight,Origin-based,North West England,0.6670931415167375,0.5921067667203551
+hindsight,Origin-based,South Scotland,0.17275990718179873,0.14566196485931163
+hindsight,Origin-based,West Midlands,0.9214671102627888,2.046334848811815
+hindsight,Shapley,London,2.768165788291251,3.9118644976590202
+hindsight,Shapley,North West England,-0.049066156347876005,0.5921067667203551
+hindsight,Shapley,South Scotland,-0.7662312848658843,0.14566196485931163
+hindsight,Shapley,West Midlands,1.4163355572162215,2.046334848811815
+hindsight,Stand-alone proportional,London,1.9446022056982488,3.9118644976590202
+hindsight,Stand-alone proportional,North West England,0.3105973542277903,0.5921067667203551
+hindsight,Stand-alone proportional,South Scotland,0.08066936380177504,0.14566196485931163
+hindsight,Stand-alone proportional,West Midlands,1.0333349805658985,2.046334848811815
 hindsight,Work-proportional,London,1.5080455351257922,3.9118644976590202
 hindsight,Work-proportional,North West England,0.686637058202156,0.5921067667203551
 hindsight,Work-proportional,South Scotland,0.3308092842239978,0.14566196485931163
 hindsight,Work-proportional,West Midlands,0.8437120267417666,2.046334848811815
-online,Dual (Theorem 3),London,2.9303181138745584,3.9938865440848526
-online,Dual (Theorem 3),North West England,0.031760636347084946,0.6302896521818553
-online,Dual (Theorem 3),South Scotland,-0.8821139375196364,0.16365451395589117
-online,Dual (Theorem 3),West Midlands,1.5504762486176975,2.088388571699746
-online,Location-based,London,1.778140880197274,3.9938865440848526
-online,Location-based,North West England,0.6901813091466968,0.6302896521818553
-online,Location-based,South Scotland,0.1743066882196693,0.16365451395589117
-online,Location-based,West Midlands,0.9878121837560652,2.088388571699746
-online,Work-proportional,London,1.6251888514917416,3.9938865440848526
-online,Work-proportional,North West England,0.7393736266086308,0.6302896521818553
-online,Work-proportional,South Scotland,0.3564971113216394,0.16365451395589117
-online,Work-proportional,West Midlands,0.9093814718976939,2.088388571699746
+online,Dual (Theorem 3),London,2.9314084610067423,3.9933714290113684
+online,Dual (Theorem 3),North West England,0.032256454066504986,0.6302195171672397
+online,Dual (Theorem 3),South Scotland,-0.8818716708254477,0.1636725249831826
+online,Dual (Theorem 3),West Midlands,1.5510843105605252,2.0881375963428974
+online,Host-based,London,0.8815216846269409,3.9933714290113684
+online,Host-based,North West England,1.5096073088563744,0.6302195171672397
+online,Host-based,South Scotland,0.7042245498704752,0.1636725249831826
+online,Host-based,West Midlands,0.5375240114545359,2.0881375963428974
+online,Origin-based,London,1.7794948402249857,3.9933714290113684
+online,Origin-based,North West England,0.6905623007539009,0.6302195171672397
+online,Origin-based,South Scotland,0.17438441385219108,0.1636725249831826
+online,Origin-based,West Midlands,0.9884359999772485,2.0881375963428974
+online,Shapley,London,2.903013738372946,3.9933714290113684
+online,Shapley,North West England,-0.014542641958033016,0.6302195171672397
+online,Shapley,South Scotland,-0.7449609486730935,0.1636725249831826
+online,Shapley,West Midlands,1.4893674070665068,2.0881375963428974
+online,Stand-alone proportional,London,2.0868064704449663,3.9933714290113684
+online,Stand-alone proportional,North West England,0.34364587805929125,0.6302195171672397
+online,Stand-alone proportional,South Scotland,0.09404318276903546,0.1636725249831826
+online,Stand-alone proportional,West Midlands,1.1083820235350335,2.0881375963428974
+online,Work-proportional,London,1.626279198623926,3.9933714290113684
+online,Work-proportional,North West England,0.7398694443280509,0.6302195171672397
+online,Work-proportional,South Scotland,0.3567393780158282,0.1636725249831826
+online,Work-proportional,West Midlands,0.9099895338405215,2.0881375963428974

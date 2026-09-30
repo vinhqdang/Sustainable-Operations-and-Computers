@@ -1,0 +1,7 @@
+Highlights
+
+• Without demand knowledge, no online scheduler beats a ratio of order √θ.
+• CARMA adds ghost jobs for expected arrivals to an exact min-cost-flow planner.
+• With a backstop, CARMA meets all deadlines; it is optimal with exact predictions.
+• On British grid data and an Alibaba trace, CARMA cuts myopic gaps by 43–60%.
+• Dual prices give a core-stable carbon attribution; origin-based charging does not.
