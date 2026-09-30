@@ -98,9 +98,9 @@ if len(rg):
     pd.Series(json_out).to_json(RES / "fairness_dual_range.json")
     print(json_out)
 lines = []
-for game, lab in [("hindsight", "(a) Hindsight game, penalised cost $c(C)$ (Theorem~\\ref{thm:core})"),
-                  ("emissions-only", "(b) Hindsight game, emissions only (dual rescaled; not covered by Theorem~\\ref{thm:core})"),
-                  ("online", "(c) Realised emissions of CARMA (online game)")]:
+for game, lab in [("hindsight", "(a) Hindsight, penalised cost"),
+                  ("emissions-only", "(b) Hindsight, emissions only"),
+                  ("online", "(c) CARMA, realised emissions")]:
     ms = [m for m in ["Origin-based", "Host-based", "Work-proportional", "Stand-alone proportional", "Shapley",
                       "Dual (Theorem 3)"] if ((summ.game == game) & (summ.method == m)).any()]
     lines.append(f"\\multicolumn{{6}}{{l}}{{\\emph{{{lab}}}}}\\\\")

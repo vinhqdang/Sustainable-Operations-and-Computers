@@ -1,3 +1,30 @@
 \section{Numerical check of Theorem~\ref{thm:carma}}\label{app:thm2check}
 
-(Results pending.)
+The weekly experiments of Section~\ref{sec:results} violate the assumptions of Theorem~\ref{thm:carma}, so we check the theorem separately in episodes that satisfy them (script \texttt{verify\_theorem2.py}). Each episode is one day ($T=24=H$ hours) of the synthetic workload, with days starting at 26 test weeks, a backstop of unlimited capacity at the episode's largest unit cost $U$ (A1), window-feasible jobs, real-job penalty $\Pi=10^4>U$ and ghost penalty $\Pi_g=U$. Ghost jobs are the true future jobs, each omitted from the predictions with probability $q$ (demand error), and the carbon forecasts of future hours receive i.i.d.\ Gaussian noise of standard deviation $\sigma$~gCO$_2$/kWh (carbon error). For each episode, we compute the clairvoyant optimum OPT with the backstop, the emissions of CARMA, and the right-hand side of the smoothness bound (\ref{eq:smooth}) from the realised $d_t$, $\varepsilon_t$ and $W_t$. There are 26 episodes for each of 12 settings (two loads and six error settings).
+
+\begin{table}[!htbp]
+\centering
+\caption{Numerical check of Theorem~\ref{thm:carma} in one-day episodes with a backstop. ALG/OPT: emissions of CARMA relative to the clairvoyant optimum (mean and maximum over 26 episodes). Bound: mean ratio of the right-hand side of (\ref{eq:smooth}) to OPT. The bound held in every episode, and no real work was late.}
+\label{tab:thm2}
+\small
+\begin{tabular}{rrrrrr}
+\toprule
+Load $\rho$ & $q$ & $\sigma$ & Mean ALG/OPT & Max ALG/OPT & Bound / OPT \\
+\midrule
+0.5 & 0 & 0 & 1.000 & 1.000 & 1.0 \\
+0.5 & 0 & 25 & 1.011 & 1.031 & 37.7 \\
+0.5 & 0 & 100 & 1.061 & 1.257 & 139.6 \\
+0.5 & 0.1 & 0 & 1.009 & 1.072 & 6.4 \\
+0.5 & 0.3 & 0 & 1.066 & 1.365 & 17.9 \\
+0.5 & 0.3 & 100 & 1.094 & 1.332 & 160.2 \\
+0.9 & 0 & 0 & 1.000 & 1.000 & 1.0 \\
+0.9 & 0 & 25 & 1.001 & 1.003 & 19.3 \\
+0.9 & 0 & 100 & 1.004 & 1.015 & 69.3 \\
+0.9 & 0.1 & 0 & 1.001 & 1.011 & 3.6 \\
+0.9 & 0.3 & 0 & 1.010 & 1.112 & 9.1 \\
+0.9 & 0.3 & 100 & 1.010 & 1.029 & 78.2 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+Three observations follow. With exact predictions, CARMA reproduces the optimum to within the 0.01 server-hour quantisation of the flow solver (relative difference at most $2\times10^{-5}$), which is consistency. No real work was late in any of the 312 episodes, in line with deadline safety. The smoothness bound holds in every episode but is loose by one to two orders of magnitude when predictions are wrong, because each misprediction enters $d_t$ in every hour in which it is visible. The realised excess over the optimum is at most 37\%, so the bound is a qualitative statement that errors enter linearly, not a tight prediction.

@@ -37,7 +37,7 @@ Tables~\ref{tab:main} and~\ref{tab:main_t} report results for the 52 test weeks 
 \centering
 \caption{Out-of-sample results in the spatio-temporal regime (migration allowed), 52 weeks of 2024 $\times$ 3 traces. Emis.: mean weekly operational emissions (tCO$_2$, attributional). Red.: reduction relative to ASAP-Local (\%). Gap: excess over the clairvoyant oracle (\%). Adj.: service-adjusted gap, in which late work is additionally charged at the episode's largest local unit cost and the oracle minimises the same objective. Late: share of work outstanding at its deadline (\%). Mig.: share of work executed away from its origin (\%). ms: mean decision time per hour (one CPU core). $p$: two-sided moving-block bootstrap test of the mean paired weekly difference in gap against CARMA, Holm-adjusted jointly over all comparisons in Tables~\ref{tab:main} and~\ref{tab:main_t}. Red.\ and Gap are means of per-episode ratios. The best gap among implementable online policies is in bold.}
 \label{tab:main}
-\footnotesize
+\footnotesize\setlength{\tabcolsep}{3.5pt}
 \begin{tabular}{llrrrrrrrl}
 \toprule
 Load & Policy & Emis. & Red. & Gap & Adj. & Late & Mig. & ms & $p$ \\
@@ -51,7 +51,7 @@ Load & Policy & Emis. & Red. & Gap & Adj. & Late & Mig. & ms & $p$ \\
 \centering
 \caption{Out-of-sample results in the temporal-only regime (no migration), 52 weeks of 2024 $\times$ 3 traces. Columns as in Table~\ref{tab:main}. Greedy-Spatial is omitted because without migration it coincides with ASAP-Local.}
 \label{tab:main_t}
-\footnotesize
+\footnotesize\setlength{\tabcolsep}{3.5pt}
 \begin{tabular}{llrrrrrrl}
 \toprule
 Load & Policy & Emis. & Red. & Gap & Adj. & Late & ms & $p$ \\
@@ -68,7 +68,7 @@ Load & Policy & Emis. & Red. & Gap & Adj. & Late & ms & $p$ \\
 \label{fig:gap}
 \end{figure}
 
-\paragraph{Spatio-temporal regime} With migration allowed, the oracle cuts attributional emissions relative to ASAP-Local by 71.8\%, 58.2\% and 41.1\% at $\rho=0.3$, 0.5 and 0.7. Greedy-Spatial realises only part of this potential (gaps of 38--67\%), because it has no temporal flexibility and floods the cleanest site with whatever arrives first. The forecast-driven planners without demand information come closer. Forecast-Reserve has gaps of 24--27\% and MPC 19--23\%. MPC+conformal (16--17\%) is the best of them at $\rho=0.3$ and 0.7 and MPC-Protect at $\rho=0.5$ (16.3\%); at $\rho=0.3$, where clean capacity is rarely scarce, the protection level wastes it and MPC-Protect is worse than MPC (28.8\%). CARMA reduces emissions by 69.3\%, 54.3\% and 36.6\% and has gaps of 9.3\%, 9.8\% and 8.0\%. Relative to MPC this is a further emission reduction of 7.7\%, 9.7\% and 9.1\%. Its advantage over the best of these baselines at each load is 6.3 (95\% block-bootstrap CI 4.5--8.2), 6.5 (5.2--7.4) and 8.0 (6.9--9.0) percentage points of gap, and CARMA emits less than MPC in 51, 51 and 52 of the 52 week-means. Scenario-MPC, which uses the same demand information in a two-stage stochastic programme, does slightly better than CARMA: its gaps are 9.0\%, 8.8\% and 7.5\%, lower by 0.3 (0.2--0.5), 1.0 (0.9--1.3) and 0.4 (0.3--0.6) points, and CARMA is better in only 19, 5 and 8 weeks. Scenario-MPC, however, needs 250--1{,}450~ms per decision against 21--40~ms for CARMA, 12--37 times longer, and solves a general LP instead of a network flow. CARMA thus captures most of the value of demand information, 10--13 points of gap against MPC, and gives up 0.3--1.0 points against a stochastic programme with the same information. Block lengths of two and eight weeks give the same conclusions.
+\paragraph{Spatio-temporal regime} With migration allowed, the oracle cuts attributional emissions relative to ASAP-Local by 71.8\%, 58.2\% and 41.1\% at $\rho=0.3$, 0.5 and 0.7. Greedy-Spatial realises only part of this potential (gaps of 38--67\%), because it has no temporal flexibility and floods the cleanest site with whatever arrives first. The forecast-driven planners without demand information come closer. Forecast-Reserve has gaps of 24--27\% and MPC 19--23\%. MPC+conformal (15.5--16.6\%) is the best of them at $\rho=0.3$ and 0.7 and MPC-Protect at $\rho=0.5$ (16.3\%); at $\rho=0.3$, where clean capacity is rarely scarce, the protection level wastes it and MPC-Protect is worse than MPC (28.8\%). CARMA reduces emissions by 69.3\%, 54.3\% and 36.6\% and has gaps of 9.3\%, 9.8\% and 8.0\%. Relative to MPC this is a further emission reduction of 7.7\%, 9.7\% and 9.1\%. Its advantage over the best of these baselines at each load is 6.3 (95\% block-bootstrap CI 4.5--8.2), 6.5 (5.2--7.4) and 8.0 (6.9--9.0) percentage points of gap, and CARMA emits less than MPC in 51, 51 and 52 of the 52 week-means. Scenario-MPC, which uses the same demand information in a two-stage stochastic programme, does slightly better than CARMA: its gaps are 9.0\%, 8.8\% and 7.5\%, lower by 0.3 (0.2--0.5), 1.0 (0.9--1.3) and 0.4 (0.3--0.6) points, and CARMA is better in only 19, 5 and 8 weeks. Scenario-MPC, however, needs 250--1{,}450~ms per decision against 21--40~ms for CARMA, 12--37 times longer, and solves a general LP instead of a network flow. CARMA thus captures most of the value of demand information, 10--13 points of gap against MPC, and gives up 0.3--1.0 points against a stochastic programme with the same information. Block lengths of two and eight weeks give the same conclusions.
 
 CARMA also finishes more work on time under heavy load. At $\rho=0.7$, 0.02\% of its work is late (Scenario-MPC 0.02\%), against 1.9\% for MPC, 0.7\% for MPC-Protect, 1.1\% for Forecast-Reserve and 4.5\% for ASAP-Local. The service-adjusted gap therefore widens the difference: 8.0\% for CARMA against 18.1--31.2\% for the forecast-driven baselines without demand information. CARMA migrates about the same share of work as MPC (32--70\%), whereas MPC-Protect migrates more (38--81\%). CARMA's advantage thus comes from better timing of the use of scarce clean capacity, not from moving more data. For the fleet of 1{,}700 batch servers at $\rho=0.5$, CARMA emits 0.31~tCO$_2$ per week less than MPC, about 16~tCO$_2$ per year, and 3.22~tCO$_2$ per week less than carbon-agnostic operation. These absolute figures scale with fleet size. Two test weeks contain gap-filled hours (Section~\ref{sec:data}); excluding them changes CARMA's gaps by at most 0.2 points and no ranking.
 
@@ -96,7 +96,7 @@ Batching pools the widths of jobs with different work-to-width ratios and theref
 \centering
 \caption{Trace-derived workload (Alibaba 2018 cluster trace, days 5--8; demand information from days 1--4), paired with 52 carbon windows of 2024 $\times$ 3 draws of origins and deadlines; spatio-temporal regime, $\rho=0.5$. Emissions are per four-day window. Columns as in Table~\ref{tab:main}; the service-adjusted gap is omitted; $p$ values are Holm-adjusted within this table.}
 \label{tab:trace}
-\footnotesize
+\footnotesize\setlength{\tabcolsep}{3.5pt}
 \begin{tabular}{lrrrrrrl}
 \toprule
 Policy & Emis. & Red. & Gap & Late & Mig. & ms & $p$ \\

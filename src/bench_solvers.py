@@ -1,4 +1,4 @@
-"""Wall-clock comparison of network simplex (OR-Tools) and a general LP solver
+"""Wall-clock comparison of the OR-Tools min-cost-flow solver (oracle(), two flow solves) and a general LP solver
 (HiGHS via SciPy) on the weekly clairvoyant problems (rho = 0.5, migration)."""
 import time, json
 import numpy as np

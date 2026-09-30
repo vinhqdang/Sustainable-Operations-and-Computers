@@ -4,12 +4,12 @@ Table~\ref{tab:sens} varies one factor at a time around the base case: spatio-te
 \centering
 \caption{Sensitivity analysis (spatio-temporal regime; 26 alternating weeks of 2024 $\times$ 2 traces per setting). Oracle red.: emission reduction of the oracle relative to ASAP-Local (\%). Gap columns: excess over the oracle (\%). Wins: weeks in which CARMA emits less than MPC. Late: share of late work (\%), MPC / CARMA. $^{a}$Busy servers draw 0.2~kWh above an idle draw of 0.2~kWh per server-hour that every batch server incurs regardless of the schedule. $^{b}$Schedules are made with average intensities, but emissions are accounted with the stylised marginal emission factor of Section~\ref{sec:sens}, and the oracle optimises marginal emissions.}
 \label{tab:sens}
-\small
+\footnotesize\setlength{\tabcolsep}{3pt}
 \begin{tabular}{lrrrrrrrr}
 \toprule
  & Oracle & \multicolumn{5}{c}{Gap to oracle (\%)} & Wins vs & Late (\%) \\
 \cmidrule(lr){3-7}
-Setting & red. & Greedy-Sp. & F.-Reserve & MPC & MPC-Prot. & CARMA & MPC & MPC / CARMA \\
+Setting & red. & Greedy & Reserve & MPC & Protect & CARMA & MPC & MPC/CARMA \\
 \midrule
 \inputtable{../results/table_sens.tex}
 \bottomrule
