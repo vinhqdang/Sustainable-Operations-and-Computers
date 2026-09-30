@@ -260,7 +260,7 @@ if __name__ == "__main__":
     dec = decomposition(tab); dec.to_csv(RES / "decomposition.csv", index=False)
     print(tab.drop(columns=["p_raw"]).round(3).to_string()); print(dec.round(2).to_string())
     fig_gap(d); fig_weekly(d); fig_tuning()
-    for which, fn in [("sens", latex_sens), ("trace", latex_trace)]:
+    for which, fn in [("sens", latex_sens), ("trace", latex_trace), ("trace_fine", lambda t: None)]:
         try:
             s = add_rel(pd.read_csv(RES / f"test_{which}.csv"))
         except FileNotFoundError:
