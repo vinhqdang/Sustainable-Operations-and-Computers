@@ -1,11 +1,10 @@
 Table~\ref{tab:sens} varies one factor at a time around the base case: spatio-temporal regime, $\rho=0.5$, $\upsilon=0.3$, $\eta=0.02$~kWh/GB, capacities 300/400/400/600. Each setting uses 26 alternating test weeks of 2024 with two fresh workload traces per week. All policies keep their base-case hyperparameters.
 
-\begin{table}[t]
+\begin{sidewaystable}
 \centering
 \caption{Sensitivity analysis (spatio-temporal regime; 26 alternating weeks of 2024 $\times$ 2 traces per setting). Oracle red.: emission reduction of the oracle relative to ASAP-Local (\%). Gap columns: excess over the oracle (\%). Wins: weeks in which CARMA emits less than MPC. Late: share of late work (\%), MPC / CARMA. $^{a}$Busy servers draw 0.2~kWh above an idle draw of 0.2~kWh per server-hour that every batch server incurs regardless of the schedule. $^{b}$Schedules are made with average intensities, but emissions are accounted with the stylised marginal emission factor of Section~\ref{sec:sens}, and the oracle optimises marginal emissions.}
 \label{tab:sens}
-\footnotesize
-\resizebox{\textwidth}{!}{%
+\small
 \begin{tabular}{lrrrrrrrr}
 \toprule
  & Oracle & \multicolumn{5}{c}{Gap to oracle (\%)} & Wins vs & Late (\%) \\
@@ -14,8 +13,8 @@ Setting & red. & Greedy-Sp. & F.-Reserve & MPC & MPC-Prot. & CARMA & MPC & MPC /
 \midrule
 \inputtable{../results/table_sens.tex}
 \bottomrule
-\end{tabular}}
-\end{table}
+\end{tabular}
+\end{sidewaystable}
 
 \paragraph{Workload and network} CARMA has the smallest gap of all online policies in every setting. Except under marginal accounting (discussed below), it emits less than MPC in all 26 weeks of each setting. The benefit of anticipation grows with the share of urgent work, because urgent arrivals are precisely the demand that myopic planners crowd out. With $\upsilon=0.5$, CARMA's gap is 6.7\% against 14.9\% for MPC-Protect and 21.5\% for MPC. With $\upsilon=0.1$, it is 11.9\% against 16.0\% and 23.0\%. The ranking is unchanged over a twelve-fold range of transmission energy intensity ($\eta=0.005$--$0.06$~kWh/GB), and the migrated share of CARMA's work stays at 49--51\%.
 

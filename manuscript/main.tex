@@ -1,47 +1,41 @@
-\documentclass[preprint,12pt]{elsarticle}
+\documentclass[pdflatex,sn-mathphys-num,lineno]{sn-jnl}
 
-\usepackage{amsmath,amssymb,amsthm}
 \usepackage{graphicx}
+\usepackage{multirow}
+\usepackage{amsmath,amssymb,amsfonts}
+\usepackage{amsthm}
+\usepackage[title]{appendix}
+\usepackage{xcolor}
+\usepackage{textcomp}
 \usepackage{booktabs}
 \usepackage{makecell}
 \usepackage{rotating}
-\usepackage[hidelinks]{hyperref}
-\usepackage{lineno}
-\usepackage{xcolor}
 \usepackage{microtype}
+\usepackage[section]{placeins}
 \setlength{\emergencystretch}{2em}
 
-\newtheorem{proposition}{Proposition}
+\theoremstyle{thmstyleone}
 \newtheorem{theorem}{Theorem}
+\newtheorem{proposition}{Proposition}
 \makeatletter
 \newcommand{\inputtable}[1]{\@@input #1 }
 \makeatother
-\journal{Sustainable Operations and Computers}
+
+\raggedbottom
 
 \begin{document}
 
-\begin{frontmatter}
+\title[Anticipating demand in carbon-aware scheduling]{Anticipating demand in carbon-aware scheduling across data centres: guarantees and fair carbon attribution}
 
-\title{Anticipating demand in carbon-aware scheduling across data centres: guarantees and fair carbon attribution}
+\author*[1]{\fnm{Quang-Vinh} \sur{Dang}}\email{vinh.dq4@buv.edu.vn}
 
-\author{Quang-Vinh Dang\corref{cor1}}
-\ead{vinh.dq4@buv.edu.vn}
-\cortext[cor1]{Corresponding author. ORCID: 0000-0002-3877-8024}
-\affiliation{organization={British University Vietnam},
-            city={Hung Yen},
-            country={Vietnam}}
+\affil*[1]{\orgname{British University Vietnam}, \orgaddress{\city{Hung Yen}, \country{Vietnam}}}
 
-\begin{abstract}
-Shifting deferrable jobs to cleaner hours and locations cuts data-centre emissions, but online schedulers act before future grid conditions and jobs are known. We formulate multi-site, deadline-constrained scheduling of bag-of-tasks jobs as a minimum-cost flow problem and propose CARMA (Carbon-aware Anticipatory Receding-horizon Multi-site Allocation), which adds ``ghost jobs'' for expected arrivals to each hourly plan. We prove that uncertainty about demand alone forces any online algorithm, even one with perfect carbon forecasts, to a competitive ratio of $\Omega(\sqrt{\theta})$, where $\theta$ is the ratio of the highest to the lowest unit emission, and myopic planning to at least $(1+\theta)/2$. Given backstop capacity, CARMA never misses a deadline under any predictions, is optimal under exact predictions and degrades linearly with prediction error. Dual prices of the pooled problem yield a carbon attribution among sites that lies in the core. On 2024 regional grid data for Great Britain, CARMA comes within 8.0--9.8\% of the clairvoyant optimum, against 15--16\% for the best myopic, protection-level or risk-averse baseline and 19--23\% for plain model-predictive control, and cuts attributional emissions by 36--68\% relative to carbon-agnostic operation. On a real cluster trace with a demand profile learned from different days, its gap is 20.7\% against 26.7--36.1\%. Anticipating demand is worth more than perfect carbon foresight. Under stylised marginal-emission accounting, achievable reductions shrink to 14\% and CARMA's edge becomes small, so physical savings depend on curtailed low-carbon supply. Origin- and host-based carbon accounting violate coalitional stability in every week, whereas the dual attribution never does in hindsight.
-\end{abstract}
+\abstract{Shifting deferrable jobs to cleaner hours and locations cuts data-centre emissions, but online schedulers act before future grid conditions and jobs are known. We formulate multi-site, deadline-constrained scheduling of bag-of-tasks jobs as a minimum-cost flow problem and propose CARMA (Carbon-aware Anticipatory Receding-horizon Multi-site Allocation), which adds ``ghost jobs'' for expected arrivals to each hourly plan. We prove that uncertainty about demand alone forces any online algorithm, even one with perfect carbon forecasts, to a competitive ratio of $\Omega(\sqrt{\theta})$, where $\theta$ is the ratio of the highest to the lowest unit emission, and myopic planning to at least $(1+\theta)/2$. Given backstop capacity, CARMA never misses a deadline under any predictions, is optimal under exact predictions and degrades linearly with prediction error. Dual prices of the pooled problem yield a carbon attribution among sites that lies in the core. On 2024 regional grid data for Great Britain, CARMA comes within 8.0--9.8\% of the clairvoyant optimum, against 15--16\% for the best myopic, protection-level or risk-averse baseline and 19--23\% for plain model-predictive control, and cuts attributional emissions by 36--68\% relative to carbon-agnostic operation. On a real cluster trace with a demand profile learned from different days, its gap is 20.7\% against 26.7--36.1\%. Anticipating demand is worth more than perfect carbon foresight. Under stylised marginal-emission accounting, achievable reductions shrink to 14\% and CARMA's edge becomes small, so physical savings depend on curtailed low-carbon supply. Origin- and host-based carbon accounting violate coalitional stability in every week, whereas the dual attribution never does in hindsight.}
 
-\begin{keyword}
-Carbon-aware computing \sep Data centre scheduling \sep Competitive analysis \sep Minimum-cost flow \sep Cooperative cost allocation \sep Carbon intensity forecasting
-\end{keyword}
+\keywords{Carbon-aware computing, Data centre scheduling, Competitive analysis, Minimum-cost flow, Cooperative cost allocation, Carbon intensity forecasting}
 
-\end{frontmatter}
-
-\linenumbers
+\maketitle
 
 \input{sec_intro.tex}
 \input{sec_methods.tex}
@@ -49,19 +43,27 @@ Carbon-aware computing \sep Data centre scheduling \sep Competitive analysis \se
 \input{sec_results.tex}
 \input{sec_discussion.tex}
 
-\section*{CRediT authorship contribution statement}
-\textbf{Quang-Vinh Dang:} Conceptualization, Methodology, Software, Data curation, Formal analysis, Investigation, Validation, Visualization, Writing -- original draft, Writing -- review \& editing.
+\backmatter
 
-\section*{Declaration of competing interest}
-The author declares no known competing financial interests or personal relationships that could have appeared to influence the work reported in this paper.
+\section*{Declarations}
 
-\section*{Funding}
-This research did not receive any specific grant from funding agencies in the public, commercial, or not-for-profit sectors.
+\bmhead{Funding} This research did not receive any specific grant from funding agencies in the public, commercial, or not-for-profit sectors.
 
-\section*{Data availability}
-The carbon-intensity data are publicly available from the NESO Carbon Intensity API~\cite{nesoapi} under the CC BY 4.0 licence. The data snapshot used in this study, all code, the workload generator with fixed random seeds, and all raw experiment outputs are available from the author's repository (\url{https://github.com/vinhqdang/Sustainable-Operations-and-Computers}).
+\bmhead{Competing interests} The author declares no competing interests.
 
-\appendix
+\bmhead{Ethics approval and consent to participate} Not applicable.
+
+\bmhead{Consent for publication} Not applicable.
+
+\bmhead{Data availability} The carbon-intensity data are publicly available from the NESO Carbon Intensity API~\cite{nesoapi} under the CC BY 4.0 licence. The Alibaba 2018 cluster trace is publicly available~\cite{alibaba2018trace}. The data snapshot used in this study, the processed trace and all raw experiment outputs are available from the author's repository (\url{https://github.com/vinhqdang/Sustainable-Operations-and-Computers}).
+
+\bmhead{Materials availability} Not applicable.
+
+\bmhead{Code availability} All code, including the workload generator with fixed random seeds, is available from the same repository.
+
+\bmhead{Author contribution} Q.-V.D.\ (ORCID 0000-0002-3877-8024): conceptualization, methodology, software, data curation, formal analysis, investigation, validation, visualization, writing -- original draft, writing -- review and editing.
+
+\begin{appendices}
 \setcounter{figure}{0}\setcounter{table}{0}
 \makeatletter\@addtoreset{figure}{section}\@addtoreset{table}{section}\makeatother
 \renewcommand{\thefigure}{\Alph{section}.\arabic{figure}}
@@ -69,8 +71,8 @@ The carbon-intensity data are publicly available from the NESO Carbon Intensity 
 \input{appendix_proofs.tex}
 \input{appendix_forecast.tex}
 \input{appendix_thm2.tex}
+\end{appendices}
 
-\bibliographystyle{elsarticle-num}
 \bibliography{references}
 
 \end{document}
