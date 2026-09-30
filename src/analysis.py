@@ -130,7 +130,7 @@ def latex_main(tab):
                 if abs(r.gap - best) < 1e-9:
                     gap = r"\textbf{" + gap + "}"
                 mig = f" & {r.mig:.1f}" if regime else ""
-                ms = "--" if pd.isna(r.ms) else (f"{r.ms:.0f}" if r.ms >= 10 else f"{r.ms:.1f}")
+                ms = "--" if pd.isna(r.ms) else (f"{r.ms:.0f}" if r.ms >= 10 else (f"{r.ms:.1f}" if r.ms >= 1 else f"{r.ms:.2f}"))
                 lines.append(f"{lab} & {r.policy} & {r.emis:.2f} & {r.red:.1f} & {gap} & {r.gap_adj:.1f} & {r.late:.2f}{mig} & {ms} & {fmt_p(r.p)}\\\\")
             lines.append(r"\addlinespace")
         open(RES / fn, "w").write("\n".join(lines[:-1]))
@@ -249,7 +249,7 @@ def latex_sens(st):
 def latex_trace(tt):
     lines = []
     for r in tt.itertuples():
-        ms = "--" if pd.isna(r.ms) else (f"{r.ms:.0f}" if r.ms >= 10 else f"{r.ms:.1f}")
+        ms = "--" if pd.isna(r.ms) else (f"{r.ms:.0f}" if r.ms >= 10 else (f"{r.ms:.1f}" if r.ms >= 1 else f"{r.ms:.2f}"))
         lines.append(f"{r.policy} & {r.emis:.2f} & {r.red:.1f} & {r.gap:.1f} & {r.late:.2f} & {r.mig:.1f} & {ms} & {fmt_p(r.p)}\\\\")
     open(RES / "table_trace.tex", "w").write("\n".join(lines))
 
