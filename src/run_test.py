@@ -2,7 +2,10 @@
 
 main:  synthetic workloads, 52 weeks x 3 seeds x 3 loads x 2 regimes
 trace: Alibaba 2018 trace workload (days 5-8) against 52 carbon windows x 3 seeds
-sens:  one-factor sensitivity (26 alternating weeks x 2 seeds), rho = 0.5, migration"""
+trace_fine: the same with finer batching (run-length classes), 1 seed
+sens:  one-factor sensitivity (26 alternating weeks x 2 seeds), rho = 0.5, migration
+Partial results are cached in results/partial_<which>_<hash>.jsonl, where the hash
+covers the code and the input data, so that a change of either starts a fresh run."""
 import sys, json, multiprocessing as mp
 import pandas as pd
 from experiment import *
@@ -11,7 +14,7 @@ CFG = json.load(open(RES / "carma_config.json"))
 REG = {True: "st", False: "t"}
 
 
-def policies(b, mig, full=True):
+def policies(b, mig, full=True, scen=False):
     c = CFG[REG[mig]]
     ps = [dict(b, policy="ASAP-Local", cube="pred"),
           dict(b, policy="Greedy-Spatial", cube="pred"),
@@ -20,6 +23,8 @@ def policies(b, mig, full=True):
           dict(b, policy="MPC-Protect", cube="pred", r=c["protect_r"], tight=c["protect_tight"], label="MPC-Protect"),
           dict(b, policy="CARMA", cube=c["cube"], kappa=c["kappa"], look=c["look"], label="CARMA"),
           dict(b, policy="Oracle", cube="truth")]
+    if scen and mig:
+        ps.append(dict(b, policy="Scenario-MPC", cube="pred", K=c["scen_K"], look=c["scen_look"], label="Scenario-MPC"))
     if full:
         ps += [dict(b, policy="MPC", cube="truth", label="MPC-Perfect"),
                dict(b, policy="MPC", cube=c["mpc_best_cube"], label="MPC+conformal"),
@@ -35,7 +40,7 @@ def main_specs():
             for i, t0 in enumerate(TEST):
                 for k in range(3):
                     b = dict(t0=t0, rho=rho, seed=10_000 + 100 * k + i, rep=k, migrate=mig, experiment="main")
-                    specs += policies(b, mig)
+                    specs += policies(b, mig, scen=True)
     return specs
 
 
@@ -45,13 +50,36 @@ def trace_specs():
         for k in range(3):
             b = dict(t0=t0, rho=0.5, seed=40_000 + 100 * k + i, rep=k, migrate=True, workload="trace",
                      experiment="trace")
-            specs += policies(b, True, full=False)
+            specs += policies(b, True, full=False, scen=True)
             c = CFG["st"]
             specs.append(dict(b, policy="CARMA", cube=c["cube"], kappa=c["kappa"], look=c["look"],
                               profile_days=(4, 8), label="CARMA (in-sample profile)"))
             specs.append(dict(b, policy="CARMA", cube="truth", kappa=c["kappa"], look=c["look"], label="CARMA-Perfect"))
             specs.append(dict(b, policy="MPC", cube="truth", label="MPC-Perfect"))
     return specs
+
+
+def trace_fine_specs():
+    specs = []
+    for i, t0 in enumerate(TEST):
+        b = dict(t0=t0, rho=0.5, seed=40_000 + i, rep=0, migrate=True, workload="trace", fine=True,
+                 experiment="trace_fine")
+        c = CFG["st"]
+        specs += [dict(b, policy="ASAP-Local", cube="pred"), dict(b, policy="MPC", cube="pred", label="MPC"),
+                  dict(b, policy="MPC-Protect", cube="pred", r=c["protect_r"], tight=c["protect_tight"], label="MPC-Protect"),
+                  dict(b, policy="CARMA", cube=c["cube"], kappa=c["kappa"], look=c["look"], label="CARMA"),
+                  dict(b, policy="Oracle", cube="truth")]
+    return specs
+
+
+def provenance():
+    import hashlib
+    h = hashlib.sha1()
+    for f in sorted((ROOT / "src").glob("*.py")) + [RES / "carma_config.json", DATA / "forecasts.pkl",
+                                                   DATA / "raw" / "gb_regional_ci_2022_2024.csv.gz",
+                                                   DATA / "traces" / "alibaba2018_jobs.csv.gz"]:
+        h.update(f.read_bytes())
+    return h.hexdigest()[:10]
 
 
 def sens_specs():
@@ -85,17 +113,17 @@ def spec_id(sp_):
 if __name__ == "__main__":
     import os, csv
     which = sys.argv[1]
-    specs = {"main": main_specs, "trace": trace_specs, "sens": sens_specs}[which]()
+    specs = {"main": main_specs, "trace": trace_specs, "trace_fine": trace_fine_specs, "sens": sens_specs}[which]()
     for sp_ in specs:
         sp_.setdefault("label", sp_["policy"])
         sp_["sid"] = spec_id(sp_)
-    part = RES / f"partial_{which}.jsonl"
+    part = RES / f"partial_{which}_{provenance()}.jsonl"
     done = set()
     if part.exists():
         for line in open(part):
             done.add(json.loads(line)["sid"])
     todo = [sp_ for sp_ in specs if sp_["sid"] not in done]
-    todo.sort(key=lambda d: d["policy"] != "CARMA")
+    todo.sort(key=lambda d: (d["policy"] != "Scenario-MPC", d["policy"] != "CARMA"))
     print(len(specs), "specs;", len(done), "done;", len(todo), "to run", flush=True)
     with mp.Pool(4) as pool, open(part, "a") as fh:
         for k, row in enumerate(pool.imap_unordered(run_one, todo, chunksize=2)):

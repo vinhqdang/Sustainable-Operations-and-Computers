@@ -26,6 +26,7 @@ if __name__ == "__main__":
     else:
         best = json.load(open(RES / "tuning_stage1_best.json"))
         d1 = gaps(["tuning_stage1.csv"]); d2 = gaps(["tuning_stage2.csv"]); dp = gaps(["tuning_stagep.csv"])
+        ds = gaps(["tuning_stages.csv"])
         cfg = {}
         for reg in ["st", "t"]:
             b = best[reg]
@@ -40,5 +41,10 @@ if __name__ == "__main__":
                             protect_r=float(rb[0]), protect_tight=int(rb[1]),
                             val_gap_cost_view=views.round(3).to_dict(), val_gap_mpc=mv.round(3).to_dict(),
                             val_gap_protect={f"{k[0]}|{k[1]}": v for k, v in pr.round(3).items()})
+            sc = ds[ds.regime == reg].groupby(["K", "look"]).gap.mean()
+            if len(sc):
+                kb = sc.idxmin()
+                cfg[reg].update(scen_K=int(kb[0]), scen_look=int(kb[1]),
+                                val_gap_scen={f"{int(k[0])}|{int(k[1])}": v for k, v in sc.round(3).items()})
         json.dump(cfg, open(RES / "carma_config.json", "w"), indent=1)
         print({r: {k: v for k, v in c.items() if not k.startswith("val")} for r, c in cfg.items()})

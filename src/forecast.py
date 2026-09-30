@@ -48,14 +48,18 @@ def build_features(wide):
             rows.append(f)
     F = pd.concat(rows, ignore_index=True)
     F["time"] = tt[F["t"].to_numpy()]
+    filled = filled_mask()
+    tgt_i = np.minimum(F["t"].to_numpy() + F["h"].to_numpy(), T - 1)
+    F["filled_tgt"] = filled[tgt_i]
+    F["filled_in"] = filled[F["t"].to_numpy()]
     return F
 
 
 def fit_and_forecast():
     wide = load_hourly()
     F = build_features(wide)
-    feats = [c for c in F.columns if c not in ("t", "time", "target")]
-    ok = F.notna().all(axis=1)
+    feats = [c for c in F.columns if c not in ("t", "time", "target", "filled_tgt", "filled_in")]
+    ok = F.notna().all(axis=1) & ~F.filled_tgt & ~F.filled_in   # never train on gap-filled values
     tr = F[ok & (F.time < pd.Timestamp(TRAIN_END) - pd.Timedelta(hours=H))]
     t0 = time.time()
     models = {}
@@ -76,7 +80,7 @@ def fit_and_forecast():
     # benchmark forecasts
     Fp["persist"] = Fp["y0"]
     Fp["snaive"] = Fp["y0"] + Fp["yday"]
-    out = Fp[["t", "time", "site", "h", "y0", "vol", "truth", "pred", "persist", "snaive"]]
+    out = Fp[["t", "time", "site", "h", "y0", "vol", "truth", "pred", "persist", "snaive", "filled_tgt"]]
     out.to_pickle(DATA / "forecasts.pkl")
     json.dump({"fit_seconds": fit_s, "n_train": len(tr), "features": feats},
               open(RES / "forecast_model_info.json", "w"), indent=1)
@@ -86,6 +90,6 @@ def fit_and_forecast():
 if __name__ == "__main__":
     RES.mkdir(exist_ok=True)
     out = fit_and_forecast()
-    te = out[(out.time >= CAL_END) & out.truth.notna()]
+    te = out[(out.time >= CAL_END) & out.truth.notna() & ~out.filled_tgt]
     for m in ["pred", "persist", "snaive"]:
         print(m, (te[m] - te.truth).abs().mean().round(2))

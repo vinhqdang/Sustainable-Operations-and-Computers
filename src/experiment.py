@@ -25,8 +25,14 @@ VAL = week_starts("2023-10-02", 13)    # policy tuning
 TEST = week_starts("2024-01-01", 52)   # out-of-sample evaluation
 
 
+def history_for(rho, urgent=0.3):
+    """Historical job traces (13 weeks before the calibration window) from which the
+    demand information of CARMA and Scenario-MPC is estimated."""
+    return [make_jobs(t, rho, 1000 + i, urgent=urgent) for i, t in enumerate(HIST)]
+
+
 def profile_for(rho, urgent=0.3):
-    return demand_profile([make_jobs(t, rho, 1000 + i, urgent=urgent) for i, t in enumerate(HIST)], HIST)
+    return demand_profile(history_for(rho, urgent), HIST)
 
 
 def marginal_factor():
@@ -57,11 +63,18 @@ def run_one(spec):
     base_cap = np.array([300.0, 400.0, 400.0, 600.0])
     sim.CAP = np.array(spec["cap"], float) if spec.get("cap") is not None else base_cap
     urgent = spec.get("urgent", 0.3)
+    hist = None
     if spec.get("workload", "synthetic") == "trace":
-        from trace import make_trace_jobs, trace_profile
-        jobs = make_trace_jobs(spec["t0"], spec["rho"], spec["seed"], urgent)
-        prof = trace_profile(spec["rho"], spec["seed"], urgent,
-                             days=tuple(spec.get("profile_days", (0, 4))))
+        from trace import make_trace_jobs, trace_profile, trace_history
+        fine = spec.get("fine", False)
+        days = tuple(spec.get("profile_days", (0, 4)))
+        jobs = make_trace_jobs(spec["t0"], spec["rho"], spec["seed"], urgent, fine=fine)
+        prof = trace_profile(spec["rho"], spec["seed"], urgent, days=days, fine=fine)
+        if spec["policy"] == "Scenario-MPC":
+            # each historical trace day is one scenario, aligned by hour of day (the
+            # profile of CARMA is an hour-of-day profile as well)
+            hj = trace_history(spec["rho"], spec["seed"], urgent, days=days, fine=fine)
+            hist = (hj, [0] * len(hj), 24)
     else:
         jobs = make_jobs(spec["t0"], spec["rho"], spec["seed"], urgent=urgent)
         prof = None
@@ -85,6 +98,12 @@ def run_one(spec):
             if prof is None:
                 prof = profile_for(spec.get("profile_rho", spec["rho"]), urgent)
             pol = AnticipatoryMPC(prof, spec["kappa"], spec["look"])
+        elif p == "Scenario-MPC":
+            if hist is None:
+                prho = spec.get("profile_rho", spec["rho"])
+                hist = (history_for(prho, urgent), HIST, 168)
+            pol = ScenarioMPC(hist[0], hist[1], K=min(spec.get("K", 4), len(hist[0])), look=spec["look"],
+                              seed=spec["seed"], period=hist[2])
         else:
             raise ValueError(p)
         r = simulate(pol, jobs, spec["t0"], TRUTH, CUBES[spec["cube"]], mig, acct=acct)

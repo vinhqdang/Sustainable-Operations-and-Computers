@@ -74,4 +74,13 @@ if __name__ == "__main__":
     with mp.Pool(4) as pool:
         rows = pool.map(task, specs, chunksize=1)
     d = pd.DataFrame(rows); d.to_csv(RES / "robustness.csv", index=False)
+    # realised MAE of the injected noise (after clipping at zero) and of the GBM
+    # forecaster over the same issue times, so that the two can be put on one scale
+    ts = np.concatenate([np.arange(t0, t0 + 168) for t0 in WEEKS])
+    tr = CUBES["truth"][ts, :, 1:]
+    mae = {"GBM": float(np.nanmean(np.abs(CUBES["pred"][ts, :, 1:] - tr)))}
+    for s_ in [25, 50, 100, 200]:
+        for corr in (False, True):
+            mae[f"{'corr' if corr else 'iid'}_{s_}"] = float(np.nanmean(np.abs(noisy_cube(s_, corr)[ts, :, 1:] - tr)))
+    json.dump(mae, open(RES / "robustness_mae.json", "w"), indent=1)
     print(d.groupby(["kind", "val", "policy"])[["gap", "late"]].mean().round(3))

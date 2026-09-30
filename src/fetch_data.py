@@ -33,9 +33,21 @@ def fetch(start, end, step_days=13):
     return pd.DataFrame(rows)
 
 
+def repair(df):
+    """Some multi-day requests return incomplete blocks. Re-request every day with
+    missing half-hours in one-day chunks and add the rows that are returned."""
+    t = pd.to_datetime(df["time"]).dt.tz_convert(None)
+    full = pd.date_range(t.min(), t.max(), freq="30min")
+    have = set(t[df.region == 13])
+    days = sorted({x.floor("D") for x in full if x not in have})
+    extra = [fetch(d.to_pydatetime(), (d + pd.Timedelta(days=1)).to_pydatetime(), step_days=1) for d in days]
+    return pd.concat([df] + extra).drop_duplicates(["time", "region"]) if extra else df
+
+
 if __name__ == "__main__":
     df = fetch(dt.datetime(2022, 1, 1), dt.datetime(2025, 1, 2))
-    df = df.drop_duplicates(["time", "region"])
+    df = repair(df.drop_duplicates(["time", "region"]))
+    df = df.sort_values(["time", "region"])
     (OUT / "raw").mkdir(parents=True, exist_ok=True)
     df.to_csv(OUT / "raw" / "gb_regional_ci_2022_2024.csv.gz", index=False)
     print(df.shape)

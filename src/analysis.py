@@ -1,14 +1,17 @@
 """Tables, statistics and figures for the scheduling experiments (revision 1).
 
 Statistics: each (week, load, regime) cell has 3 independent workload traces; tests
-use week-level means (52 pairs). p-values: two-sided Wilcoxon signed-rank tests,
-Holm-adjusted jointly over all comparisons of a table. Confidence intervals for mean
-paired differences: moving-block bootstrap over weeks (block length 4, 5000 draws),
-which respects the serial correlation of consecutive weeks."""
+use week-level means (52 paired weeks). The estimand is the mean paired difference of
+the gap to the oracle between a policy and CARMA. Confidence intervals and two-sided
+p-values come from a moving-block bootstrap over weeks (block length 4, 5000 draws),
+which respects the serial correlation of consecutive weeks; the p-value is the share
+of bootstrap means of the centred series at least as far from zero as the observed
+mean. p-values are Holm-adjusted jointly over all comparisons of the main experiment
+(both regimes and all loads), and separately for the trace and sensitivity sets.
+Block lengths 2 and 8 are reported as a sensitivity check."""
 import json
 import numpy as np
 import pandas as pd
-from scipy.stats import wilcoxon
 import matplotlib
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
@@ -19,11 +22,11 @@ plt.rcParams.update({"font.family": "serif", "font.serif": ["Nimbus Roman", "Tim
                      "mathtext.fontset": "stix", "font.size": 9, "axes.spines.top": False,
                      "axes.spines.right": False, "savefig.bbox": "tight", "savefig.dpi": 300})
 ORDER = ["ASAP-Local", "Greedy-Spatial", "Forecast-Reserve", "MPC", "MPC-Protect", "MPC+conformal",
-         "MPC-Perfect", "CARMA", "CARMA+conformal", "CARMA-Perfect", "Oracle"]
+         "MPC-Perfect", "Scenario-MPC", "CARMA", "CARMA+conformal", "CARMA-Perfect", "Oracle"]
 PAL = {"ASAP-Local": "0.75", "Greedy-Spatial": "0.55", "Forecast-Reserve": "#a6cee3", "MPC": "#1f78b4",
        "MPC-Protect": "#33a02c", "MPC+conformal": "#6a3d9a", "MPC-Perfect": "#b2df8a", "CARMA": "#d95f02",
        "CARMA+conformal": "#fdbf6f", "CARMA-Perfect": "#e31a1c", "Oracle": "0.1",
-       "CARMA (in-sample profile)": "#fb9a99"}
+       "CARMA (in-sample profile)": "#fb9a99", "Scenario-MPC": "#8c510a"}
 KEY = ["experiment", "migrate", "rho", "t0", "rep"]
 
 
@@ -34,13 +37,27 @@ def holm(p):
     return adj
 
 
+def _boot_idx(n, B, block, seed):
+    rng = np.random.default_rng(seed)
+    nb = int(np.ceil(n / block)); starts = rng.integers(0, n - block + 1, (B, nb))
+    return (starts[:, :, None] + np.arange(block)[None, None, :]).reshape(B, -1)[:, :n]
+
+
 def block_boot(x, B=5000, block=4, seed=0):
     """95% CI of the mean of a weekly series by moving-block bootstrap."""
-    x = np.asarray(x, float); n = len(x); rng = np.random.default_rng(seed)
-    nb = int(np.ceil(n / block)); starts = rng.integers(0, n - block + 1, (B, nb))
-    idx = (starts[:, :, None] + np.arange(block)[None, None, :]).reshape(B, -1)[:, :n]
-    m = x[idx].mean(1)
+    x = np.asarray(x, float)
+    m = x[_boot_idx(len(x), B, block, seed)].mean(1)
     return np.percentile(m, [2.5, 97.5])
+
+
+def block_boot_p(x, B=5000, block=4, seed=1):
+    """Two-sided moving-block bootstrap p-value for H0: mean = 0."""
+    x = np.asarray(x, float)
+    if np.allclose(x, 0):
+        return 1.0
+    xc = x - x.mean()
+    m = xc[_boot_idx(len(x), B, block, seed)].mean(1)
+    return float((1 + (np.abs(m) >= abs(x.mean())).sum()) / (B + 1))
 
 
 def add_rel(d):
@@ -72,14 +89,20 @@ def summarise(d, group_cols, order):
             if l not in ("CARMA", "Oracle"):
                 wl = weekly(g, l).loc[carma.index]
                 gd = (g[g.label == l].groupby("t0").gap.mean() - g[g.label == "CARMA"].groupby("t0").gap.mean()).loc[carma.index]
-                r["p_raw"] = wilcoxon(carma.values, wl.values).pvalue if not np.allclose(carma.values, wl.values) else 1.0
+                r["p_raw"] = block_boot_p(gd.values)
                 r["wins"] = int((carma.values < wl.values - 1e-9).sum()); r["weeks"] = len(carma)
                 lo, hi = block_boot(gd.values)
                 r.update(dgap=gd.mean(), dgap_lo=lo, dgap_hi=hi)
+                for bl in (2, 8):
+                    lo_, hi_ = block_boot(gd.values, block=bl)
+                    r.update({f"dgap_lo_b{bl}": lo_, f"dgap_hi_b{bl}": hi_, f"p_raw_b{bl}": block_boot_p(gd.values, block=bl)})
             rows.append(r)
     t = pd.DataFrame(rows)
     m = t.p_raw.notna()
     t.loc[m, "p"] = holm(t.loc[m, "p_raw"].values)
+    for bl in (2, 8):
+        if f"p_raw_b{bl}" in t:
+            t.loc[m, f"p_b{bl}"] = holm(t.loc[m, f"p_raw_b{bl}"].values)
     return t
 
 
@@ -122,22 +145,26 @@ def decomposition(tab):
 def fig_gap(d):
     fig, axs = plt.subplots(1, 2, figsize=(7.2, 2.8))
     pols = ["Greedy-Spatial", "Forecast-Reserve", "MPC", "MPC-Protect", "MPC+conformal", "MPC-Perfect",
-            "CARMA", "CARMA+conformal", "CARMA-Perfect"]
+            "Scenario-MPC", "CARMA", "CARMA+conformal", "CARMA-Perfect"]
     for ax, mig in zip(axs, [True, False]):
         g = d[d.migrate == mig]
-        w = 0.09
-        for k, p in enumerate(pols):
-            wk = g[g.label == p].groupby(["rho", "t0"]).gap.mean().groupby("rho")
-            mu = wk.mean(); se = wk.std() / np.sqrt(wk.count())
-            x = np.arange(3) + (k - (len(pols) - 1) / 2) * w
-            ax.bar(x, mu.values, w, yerr=1.96 * se.values, color=PAL[p], label=p,
+        pl = [p for p in pols if (g.label == p).any() and (mig or p != "Greedy-Spatial")]
+        w = 0.8 / len(pl)
+        for k, p in enumerate(pl):
+            wk = g[g.label == p].groupby(["rho", "t0"]).gap.mean()
+            mu, lo, hi = [], [], []
+            for rho in [0.3, 0.5, 0.7]:
+                v = wk.loc[rho].sort_index().values
+                c = block_boot(v); mu.append(v.mean()); lo.append(v.mean() - c[0]); hi.append(c[1] - v.mean())
+            x = np.arange(3) + (k - (len(pl) - 1) / 2) * w
+            ax.bar(x, mu, w, yerr=[lo, hi], color=PAL[p], label=p,
                    error_kw=dict(lw=0.6, capsize=1.2), edgecolor="none")
         ax.set_xticks(range(3)); ax.set_xticklabels([f"$\\rho$ = {r}" for r in [0.3, 0.5, 0.7]])
         ax.set_ylabel("Gap to clairvoyant oracle (%)")
         ax.set_title("(a) Spatio-temporal (migration allowed)" if mig else "(b) Temporal-only (no migration)",
                      fontsize=9, loc="left")
     h, l = axs[0].get_legend_handles_labels()
-    fig.legend(h, l, frameon=False, fontsize=7, ncol=5, loc="lower center", bbox_to_anchor=(0.5, -0.14))
+    fig.legend(h, l, frameon=False, fontsize=7, ncol=5, loc="lower center", bbox_to_anchor=(0.5, -0.2))
     fig.savefig(FIG / "fig4_gap.pdf"); plt.close(fig)
 
 

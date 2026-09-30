@@ -2,7 +2,7 @@
 
 \subsection{Carbon-intensity data and forecasts}\label{sec:res_forecast}
 
-Fig.~\ref{fig:data} shows the regional intensities. Over 2022--2024, mean intensity was 37~gCO$_2$/kWh in South Scotland, 58 in North West England, 156 in the West Midlands and 163 in London. At any hour the gap between the cleanest and dirtiest site is therefore large, which is what makes spatial shifting attractive. Intensities fell steadily: London's annual mean dropped from 202~gCO$_2$/kWh in 2022 to 124 in 2024. Diurnal profiles peak in the early evening (around 18:00 UTC), and the profile of South Scotland is much flatter than those of the southern sites. The four series are positively correlated (pairwise correlations between 0.50 and 0.87), because national wind output drives all of them.
+Fig.~\ref{fig:data} shows the regional intensities. Over 2022--2024, mean intensity was 37~gCO$_2$/kWh in South Scotland, 58 in North West England, 156 in the West Midlands and 163 in London. The regional means indicate large spatial heterogeneity, and it persists hour by hour: the spread between the cleanest and the dirtiest of the four sites has a median of 156~gCO$_2$/kWh and exceeds 54~g in 90\% of hours. This is what makes spatial shifting attractive. Annual mean intensities declined at every site; London's fell from 202~gCO$_2$/kWh in 2022 to 125 in 2024. Diurnal profiles peak in the early evening (around 18:00 UTC), and the profile of South Scotland is much flatter than those of the southern sites. The four series are positively correlated (pairwise correlations between 0.51 and 0.87), because national wind output drives all of them.
 
 \begin{figure}[t]
 \centering
@@ -11,7 +11,7 @@ Fig.~\ref{fig:data} shows the regional intensities. Over 2022--2024, mean intens
 \label{fig:data}
 \end{figure}
 
-The forecaster was trained on 1.24 million (issue time, site, horizon) samples in about one minute. In 2024 its mean absolute error (MAE), averaged over horizons and sites, is 31.2~gCO$_2$/kWh, against 34.4 for persistence and 40.4 for a seasonal-naive forecast. The advantage is about 23\% at horizons of 1--6 hours, and the difference is significant at all English sites up to 18 hours in Diebold--Mariano tests~\cite{diebold1995comparing}. Day-ahead skill is limited, because no weather inputs are used. Adaptive conformal inference keeps the upper bounds calibrated despite the 2024 decarbonisation drift. \ref{app:forecast} gives the full evaluation (accuracy by horizon and site, coverage, pinball loss).
+The forecaster was trained on 1.24 million (issue time, site, horizon) samples in about one minute. In 2024 its mean absolute error (MAE), averaged over horizons and sites, is 31.7~gCO$_2$/kWh, against 35.3 for persistence and 40.9 for a seasonal-naive forecast. The advantage is 23--25\% at horizons of 1--6 hours, and the difference is significant at all English sites up to 18 hours in Diebold--Mariano tests~\cite{diebold1995comparing}. Day-ahead skill is limited, because no weather inputs are used. Adaptive recalibration keeps the annual coverage of the upper bounds within 0.003 of target despite the 2024 decarbonisation drift. \ref{app:forecast} gives the full evaluation (accuracy by horizon and site, coverage, pinball loss).
 
 \subsection{Hyperparameter tuning}\label{sec:tuning}
 

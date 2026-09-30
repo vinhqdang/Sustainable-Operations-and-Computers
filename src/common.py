@@ -33,8 +33,17 @@ def load_hourly():
     wide = g.unstack("region")
     idx = pd.date_range("2022-01-01", "2024-12-31 23:00", freq="h")
     wide = wide.reindex(idx)
-    n_missing = int(wide["ci"].isna().any(axis=1).sum())
-    wide = wide.interpolate(limit_direction="both")
-    wide.attrs["n_missing_hours"] = n_missing
+    missing = wide["ci"].isna().any(axis=1)
+    # Causal gap filling: carry the last observation forward (persistence), so that no
+    # filled value depends on data published after it. Filled hours are flagged and
+    # excluded from forecast training, calibration and forecast evaluation.
+    wide = wide.ffill()
+    wide.attrs["n_missing_hours"] = int(missing.sum())
+    wide.attrs["filled"] = missing.to_numpy()
     wide.to_pickle(cache)
     return wide
+
+
+def filled_mask():
+    """Boolean array over the hourly index: True where the value was gap-filled."""
+    return np.asarray(load_hourly().attrs["filled"], bool)

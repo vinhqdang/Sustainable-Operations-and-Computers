@@ -6,7 +6,7 @@ import numpy as np
 import pandas as pd
 from scipy.stats import norm
 from common import *
-from conformal import load_cubes, upper_cube
+from conformal import load_cubes, upper_cube, valid_pairs
 
 idx, truth, cubes, vol = load_cubes()
 T, S = truth.shape
@@ -18,14 +18,15 @@ def sel(a, b):
 
 
 te, va = sel(VAL_END, TEST_END), sel(CAL_END, VAL_END)
+VP = valid_pairs(T)
 Y = lambda ts: np.transpose(truth[ts[:, None] + np.arange(1, H + 1)[None, :]], (0, 2, 1))  # [n,S,H]
 rows = []
 for lv in [0.5, 0.6, 0.7, 0.8, 0.9]:
     for gamma, lab in [(0.0, "Split conformal"), (0.005, "Adaptive (ACI)")]:
         U, _ = upper_cube(idx, truth, cubes["pred"], vol, lv, gamma=gamma)
         y, q = Y(te), U[te, :, 1:]
-        e = y - q
-        pin = np.mean(np.maximum(lv * e, (lv - 1) * e))
+        e = np.where(VP[te][:, None, :], y - q, np.nan)
+        pin = np.nanmean(np.maximum(lv * e, (lv - 1) * e))
         rows.append(dict(level=lv, method=lab, pinball=pin))
 pin = pd.DataFrame(rows)
 
@@ -45,9 +46,10 @@ def dm(e1, e2, h):
 dmr = []
 for h in [1, 3, 6, 12, 18, 24]:
     for s in range(S):
-        y = truth[te + h, s]
-        st, p = dm(cubes["pred"][te, s, h] - y, cubes["persist"][te, s, h] - y, h)
-        st2, p2 = dm(cubes["pred"][te, s, h] - y, cubes["snaive"][te, s, h] - y, h)
+        tv = te[VP[te, h - 1]]
+        y = truth[tv + h, s]
+        st, p = dm(cubes["pred"][tv, s, h] - y, cubes["persist"][tv, s, h] - y, h)
+        st2, p2 = dm(cubes["pred"][tv, s, h] - y, cubes["snaive"][tv, s, h] - y, h)
         dmr.append(dict(h=h, site=SITES[SITE_IDS[s]], dm_persist=st, p_persist=p, dm_snaive=st2, p_snaive=p2))
 dmr = pd.DataFrame(dmr)
 

@@ -13,8 +13,8 @@
 % ---- forecasting module
 \node[blk] (feed) at (0,0) {Regional carbon-intensity data $I_s(t)$};
 \node[blk,below=0.45cm of feed] (gbm) {Direct GBM models, $h=1,\dots,24$};
-\node[blk,below=0.45cm of gbm] (cp) {Conformal calibration with ACI};
-\draw[ar] (feed)--(gbm); \draw[ar] (gbm)--(cp);
+\node[blk,below=0.45cm of gbm,densely dashed] (cp) {Optional: conformal upper quantiles (ACI)};
+\draw[ar] (feed)--(gbm); \draw[ar,densely dashed] (gbm)--(cp);
 \node[frm,fit=(feed)(cp)] (F1) {};
 \node[lab] at (F1.north west) {(a) Carbon forecasting};
 % ---- demand module
@@ -34,14 +34,15 @@
  \foreach \n in {1,2,3}{\draw[thin] (s)--(j\n);}
  \foreach \n in {4,5}{\draw[thin,dashed] (s)--(j\n);}
  \draw[thin] (j1)--(h1) (j1)--(h2) (j2)--(h2) (j2)--(h3) (j3)--(h3) (j3)--(h4);
- \draw[thin,dashed] (j4)--(h5) (j5)--(h6);
- \foreach \a in {1,...,6}{\foreach \b in {1,2,3}{\draw[very thin,gray] (h\a)--(k\b);}}
+ \draw[semithick,dashed] (j4)--(h5) (j5)--(h6);
+ \foreach \a in {1,...,6}{\foreach \b in {1,2,3}{\draw[very thin,gray!60] (h\a)--(k\b);}}
  \foreach \b in {1,2,3}{\draw[thin] (k\b)--(t);}
- \draw[thin,dotted] (j3) to[bend right=55] (t);
+ \draw[semithick,densely dotted] (j3) to[out=-35,in=-100,looseness=1.25] (t);
+ \node[font=\scriptsize,align=left,anchor=west] at (0.35,-2.25) {dotted: slack arc, penalty\\ $\Pi$ (real) or $\Pi_g$ (ghost)};
  \node[font=\footnotesize,align=center] at (-1.1,2.25) {jobs};
  \node[font=\footnotesize,align=center] at (0.2,2.25) {job--hour};
  \node[font=\footnotesize,align=center] at (1.5,2.25) {hour--site};
- \node[font=\scriptsize,align=center] at (-0.45,-2.25) {real (solid) and ghost (dashed) jobs};
+ \node[font=\scriptsize,align=center] at (-1.35,-2.05) {real (solid) and\\ ghost (dashed) jobs};
  \node[font=\scriptsize,gray] at (0.85,-2.25) {};
 \end{scope}
 \node[frm,minimum width=6.2cm,minimum height=5.7cm] (F3) at (8.05,-2.3) {};
@@ -49,8 +50,9 @@
 % ---- execution
 \node[blk,text width=4.2cm] (exe) at (8.05,-6.35) {Execute hour-$t$ allocation of real jobs; observe $I_s(t{+}1)$ and new arrivals};
 % ---- connections
-\draw[ar] (cp.east) -- node[above,font=\footnotesize,pos=0.5]{arc costs $\hat c_{os}(t{+}h)$} (cp.east -| F3.west);
-\draw[ar] (prof.east) -- node[above,font=\footnotesize,pos=0.45]{ghost jobs, weight $\kappa$} (prof.east -| F3.west);
+\draw[ar] (gbm.east -| F1.east) -- node[above,font=\footnotesize,align=center]{point forecasts\\[-1pt] $\to$ arc costs $\hat c_{os}(t{+}h)$} (gbm.east -| F3.west);
+\draw[ar,densely dashed] (cp.east -| F1.east) -- node[above,font=\footnotesize,align=center]{or conformal\\[-1pt] cost view $U^{\beta}$} (cp.east -| F3.west);
+\draw[ar] (prof.east -| F2.east) -- node[above,font=\footnotesize,align=center]{ghost jobs,\\[-1pt] weight $\kappa$} (prof.east -| F3.west);
 \draw[ar] (F3.south) -- (exe.north);
 \draw[ar] (exe.south) -- ++(0,-0.35) -| node[pos=0.75,left,font=\footnotesize]{$t\leftarrow t{+}1$} ([xshift=-0.55cm]F1.west) |- (feed.west);
 \draw[ar] ([xshift=-0.55cm]F2.west |- hist.west) -- (hist.west);

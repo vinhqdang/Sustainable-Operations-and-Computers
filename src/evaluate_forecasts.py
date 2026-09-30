@@ -3,16 +3,17 @@ import json
 import numpy as np
 import pandas as pd
 from common import *
-from conformal import load_cubes, upper_cube
+from conformal import load_cubes, upper_cube, valid_pairs
 
 idx, truth, cubes, vol = load_cubes()
 T, S = truth.shape
 te = np.where((idx >= VAL_END) & (idx < TEST_END))[0]
 te = te[te + H < T]
+VALID = valid_pairs(T)[te]          # [n, H]: exclude gap-filled issue or target hours
 rows = []
 for name, key in [("Persistence", "persist"), ("Seasonal naive (24 h)", "snaive"), ("GBM (proposed)", "pred")]:
     for h in range(1, H + 1):
-        e = cubes[key][te, :, h] - truth[te + h]
+        e = (cubes[key][te, :, h] - truth[te + h])[VALID[:, h - 1]]
         for s in range(S):
             rows.append(dict(model=name, h=h, site=SITES[SITE_IDS[s]], mae=np.abs(e[:, s]).mean(),
                              rmse=np.sqrt((e[:, s] ** 2).mean())))
@@ -26,13 +27,15 @@ for lv in [0.5, 0.6, 0.7, 0.8, 0.9]:
         U, _ = upper_cube(idx, truth, cubes["pred"], vol, lv, gamma=gamma)
         hit = truth[te[:, None] + np.arange(1, H + 1)[None, :]]  # [n, H, S]
         u = np.transpose(U[te, :, 1:], (0, 2, 1))
-        cov = (hit <= u).mean(axis=0)  # [H, S]
+        ok = np.broadcast_to(VALID[:, :, None], hit.shape)
+        c = np.where(ok, hit <= u, np.nan)
+        cov = np.nanmean(c, axis=0)  # [H, S]
         # monthly coverage spread (worst month)
         months = idx[te].month
-        mcov = [((hit[months == m] <= u[months == m]).mean()) for m in range(1, 13)]
+        mcov = [np.nanmean(c[months == m]) for m in range(1, 13)]
         cal.append(dict(level=lv, method=lab, coverage=cov.mean(), cov_h1=cov[0].mean(),
                         cov_h24=cov[-1].mean(), worst_month=min(mcov), best_month=max(mcov),
-                        mean_excess=float(np.mean(u - np.transpose(cubes["pred"][te, :, 1:], (0, 2, 1))))))
+                        mean_excess=float(np.nanmean(np.where(ok, u - np.transpose(cubes["pred"][te, :, 1:], (0, 2, 1)), np.nan)))))
 calib = pd.DataFrame(cal)
 calib.to_csv(RES / "forecast_calibration.csv", index=False)
 
@@ -43,5 +46,6 @@ print(summ); print(bys); print(byh); print(calib.round(3))
 raw = pd.read_csv(DATA / "raw" / "gb_regional_ci_2022_2024.csv.gz", usecols=["time"])
 hrs = pd.to_datetime(raw.time).dt.tz_localize(None).dt.floor("h")
 full = pd.date_range("2022-01-01", "2024-12-31 23:00", freq="h")
-json.dump({"hours": len(full), "hours_without_data": int((~full.isin(hrs)).sum())},
+json.dump({"hours": len(full), "hours_without_data": int((~full.isin(hrs)).sum()),
+           "filled_hours": [str(x) for x in load_hourly().index[filled_mask()]]},
           open(RES / "data_info.json", "w"))

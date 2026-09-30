@@ -14,11 +14,16 @@ import sim
 CFG = json.load(open(RES / "carma_config.json"))
 RHO = 0.5
 COALS = [c for r in range(1, S + 1) for c in itertools.combinations(range(S), r)]
+# The demand profile is learned once from the fleet-wide history (full capacity); a
+# coalition keeps the part of it that originates at its own sites. (make_jobs scales
+# arrivals with the current capacity, so the profile must not be rebuilt after the
+# capacity of non-members has been removed.)
+PROFILE = profile_for(RHO)
 
 
 def week_jobs(i, t0):
     jobs = make_jobs(t0, RHO, 10_000 + i)
-    jobs["ev"] = np.ones(jobs["n"], bool)  # the game covers every job of the trace
+    jobs["ev"] = np.ones(jobs["n"], bool)  # the game covers every job of the 216-hour arrival episode
     return jobs
 
 
@@ -44,7 +49,7 @@ def task(args):
         base_cap = sim.CAP.copy()
         sim.CAP = base_cap * mask
         try:
-            W, M = profile_for(RHO)
+            W, M = PROFILE
             prof = (W * mask[None, :, None], M * mask[None, :, None])
             pol = AnticipatoryMPC(prof, CFG["st"]["kappa"], CFG["st"]["look"])
             r = simulate(pol, restrict(jobs, list(coal)), t0, TRUTH, CUBES[CFG["st"]["cube"]], True)

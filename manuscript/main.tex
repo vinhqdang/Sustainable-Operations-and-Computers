@@ -3,6 +3,8 @@
 \usepackage{amsmath,amssymb,amsthm}
 \usepackage{graphicx}
 \usepackage{booktabs}
+\usepackage{makecell}
+\usepackage{rotating}
 \usepackage[hidelinks]{hyperref}
 \usepackage{lineno}
 \usepackage{xcolor}
@@ -60,8 +62,13 @@ This research did not receive any specific grant from funding agencies in the pu
 The carbon-intensity data are publicly available from the NESO Carbon Intensity API~\cite{nesoapi} under the CC BY 4.0 licence. The data snapshot used in this study, all code, the workload generator with fixed random seeds, and all raw experiment outputs are available from the author's repository (\url{https://github.com/vinhqdang/Sustainable-Operations-and-Computers}).
 
 \appendix
+\setcounter{figure}{0}\setcounter{table}{0}
+\makeatletter\@addtoreset{figure}{section}\@addtoreset{table}{section}\makeatother
+\renewcommand{\thefigure}{\Alph{section}.\arabic{figure}}
+\renewcommand{\thetable}{\Alph{section}.\arabic{table}}
 \input{appendix_proofs.tex}
 \input{appendix_forecast.tex}
+\input{appendix_thm2.tex}
 
 \bibliographystyle{elsarticle-num}
 \bibliography{references}

@@ -3,7 +3,8 @@
 stage 1: CARMA anticipation weight kappa x look-ahead (point forecasts), plus MPC and oracle
 stage 2: carbon cost view (point vs conformal level beta) for MPC and for CARMA at the
          stage-1 winner of the same regime
-stage p: MPC-Protect protection share r x urgency horizon"""
+stage p: MPC-Protect protection share r x urgency horizon
+stage s: Scenario-MPC number of scenarios K x look-ahead (spatio-temporal regime)"""
 import sys, json, itertools, multiprocessing as mp
 import pandas as pd
 from experiment import *
@@ -27,6 +28,10 @@ if __name__ == "__main__":
                     for c in [f"q{int(l * 100)}" for l in LEVELS]:
                         specs.append(dict(base, policy="CARMA", cube=c, kappa=best["kappa"], look=best["look"]))
                         specs.append(dict(base, policy="MPC", cube=c))
+                elif stage == "s":
+                    if reg == "st":
+                        for K, L in itertools.product([4, 8], [6, 12]):
+                            specs.append(dict(base, policy="Scenario-MPC", cube="pred", K=K, look=L))
                 elif stage == "p":
                     for r, tt in itertools.product([0.1, 0.2, 0.3, 0.5], [1, 2, 4]):
                         specs.append(dict(base, policy="MPC-Protect", cube="pred", r=r, tight=tt))

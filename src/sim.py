@@ -65,17 +65,22 @@ def make_jobs(t0, rho, seed, hours=168, urgent=0.3, pre=24, post=24):
 # --------------------------------------------------------------------------
 # Min-cost-flow core. Every allocation problem in this study is a transportation
 # problem: source -> job (work) -> job-hour (width) -> hour-site (capacity) -> sink,
-# plus a job -> sink slack arc priced at the lateness penalty. Solved exactly by
-# network simplex on an integer grid of 0.01 server-hours and 0.01 gCO2.
+# plus a job -> sink slack arc priced at the lateness penalty. Work, widths,
+# capacities and costs are quantised to an integer grid (0.01 server-hours, 0.01 gCO2)
+# and the quantised network is solved to optimality with the OR-Tools min-cost-flow
+# solver (cost-scaling push-relabel).
 # --------------------------------------------------------------------------
 from ortools.graph.python import min_cost_flow
 
 QW, QC = 100.0, 100.0
 
 
-def flow_solve(rem, width, orig, rel, win, cost, cap, pen, job_weight=None):
+def flow_solve(rem, width, orig, rel, win, cost, cap, pen, job_weight=None, backstop=None):
     """rel/win: release offset and window length (hours) of each job within the
-    planning grid cost[L, o, s], cap[L, s]. Returns (jj, hh, ss, x) triples."""
+    planning grid cost[L, o, s], cap[L, s]. Returns (jj, hh, ss, x) triples and the
+    slack per job. With `backstop` = (unit cost per hour [L]), every job-hour may also
+    run on a backstop resource of unlimited capacity (Assumption A1); the backstop flow
+    per job-hour is then returned as a third element (jj_b, hh_b, xb)."""
     J = len(rem); L = cost.shape[0]
     jj = np.repeat(np.arange(J), win)
     hh = np.concatenate([rel[j] + np.arange(win[j]) for j in range(J)]) if J else np.zeros(0, int)
@@ -97,6 +102,11 @@ def flow_solve(rem, width, orig, rel, win, cost, cap, pen, job_weight=None):
     s_rep = np.tile(np.arange(S), n_jh)
     h_rep = hh[jh_rep]
     c_arc = cost[h_rep, orig[jj[jh_rep]], s_rep]
+    # forbidden (origin, site) pairs, e.g. migration in the temporal-only regime, carry a
+    # prohibitive cost; their arcs are removed so that feasibility never depends on the
+    # objective weights below
+    keep = c_arc < 1e6
+    jh_rep, s_rep, h_rep, c_arc = jh_rep[keep], s_rep[keep], h_rep[keep], c_arc[keep]
     if job_weight is not None:
         c_arc = c_arc * job_weight[jj[jh_rep]]
     tails.append(jh_n[jh_rep]); heads.append(hs_n[h_rep * S + s_rep])
@@ -104,6 +114,10 @@ def flow_solve(rem, width, orig, rel, win, cost, cap, pen, job_weight=None):
     first_x = sum(len(t) for t in tails)
     tails.append(hs_n); heads.append(np.full(L * S, snk))
     caps.append(np.floor(cap.ravel() * QW).astype(np.int64)); costs.append(np.zeros(L * S, np.int64))
+    first_b = sum(len(t) for t in tails)
+    if backstop is not None:
+        tails.append(jh_n); heads.append(np.full(n_jh, snk)); caps.append(w_int[jj])
+        costs.append(np.rint(np.asarray(backstop)[hh] * QC).astype(np.int64))
     mcf = min_cost_flow.SimpleMinCostFlow()
     T_ = np.concatenate(tails); Hd = np.concatenate(heads)
     mcf.add_arcs_with_capacity_and_unit_cost(T_, Hd, np.concatenate(caps), np.concatenate(costs))
@@ -116,6 +130,9 @@ def flow_solve(rem, width, orig, rel, win, cost, cap, pen, job_weight=None):
     n_x = len(jh_rep)
     fl = mcf.flows(np.arange(first_x - n_x, first_x)) / QW
     slack = mcf.flows(np.arange(J, 2 * J)) / QW
+    if backstop is not None:
+        xb = mcf.flows(np.arange(first_b, first_b + n_jh)) / QW
+        return jj[jh_rep], h_rep, s_rep, fl, slack, (jj, hh, xb)
     return jj[jh_rep], h_rep, s_rep, fl, slack
 
 def solve_alloc(rem, width, orig, dl, t, cost, cap):
@@ -313,6 +330,9 @@ def simulate(policy, jobs, t0, truth, cube, migrate=True, acct=None):
         x = np.maximum(policy.act(t, P, view), 0)
         wall += time.perf_counter() - tic; n_dec += 1
         x = np.minimum(x, rem[ids][:, None])
+        # feasibility of the executed allocation (tolerance: the 0.01 server-hour grid)
+        assert np.all(x.sum(0) <= view["cap"][0] + 0.05), "capacity exceeded"
+        assert np.all(x.sum(1) <= P["width"] + 0.05), "width exceeded"
         rem[ids] = np.maximum(rem[ids] - x.sum(1), 0)
         rem[rem < DONE_TOL] = 0.0  # ignore residue from the 0.01 server-hour flow grid
         step = ct_all[t][jobs["o"][ids]]
@@ -341,10 +361,12 @@ def late_unit_cost(ct, migrate=True):
 
 
 def oracle(jobs, t0, truth, migrate=True, acct=None):
-    """Offline clairvoyant plan (known arrivals and CI). All jobs of the trace must be
-    served, but only evaluated jobs (flag ev) carry emission costs in the objective, so
-    the value is a lower bound on the evaluated emissions of any schedule that serves
-    every job by its deadline."""
+    """Offline clairvoyant plan (known arrivals and CI). All jobs of the episode must be
+    served by their deadlines where capacity allows (unserved work is penalised at BIG),
+    but only evaluated jobs (flag ev) carry emission costs in the objective, so the value
+    is a lower bound on the evaluated emissions of any schedule that serves every job of
+    the episode by its deadline. Migration restrictions are enforced as feasibility
+    constraints (see flow_solve)."""
     tf = int(jobs["a"].min()); L = int(jobs["d"].max()) - tf
     ct = unit_cost((truth if acct is None else acct)[tf:tf + L], migrate)
     cap = capacity(np.arange(tf, tf + L))
@@ -354,7 +376,16 @@ def oracle(jobs, t0, truth, migrate=True, acct=None):
                                   job_weight=ev.astype(float))
     total = jobs["w"][ev].sum(); k = ev[jj]
     e = float((x * ct[hh, jobs["o"][jj], ss])[k].sum())
-    return dict(emis_t=e / 1e6, emis_adj_t=(e + late_unit_cost(ct, migrate) * float(u[ev].sum())) / 1e6,
+    # benchmark for the service-adjusted metric: evaluated work may be left undone at the
+    # same unit charge c_late that the metric applies to late work (boundary work must
+    # still be served on time). Any schedule whose boundary work is on time has an
+    # on-time part that is feasible here, so this value bounds its adjusted emissions.
+    c_late = late_unit_cost(ct, migrate)
+    jj2, hh2, ss2, x2, u2 = flow_solve(jobs["w"], jobs["m"], jobs["o"], jobs["a"] - tf,
+                                       jobs["d"] - jobs["a"], ct, cap, np.where(ev, c_late, BIG),
+                                       job_weight=ev.astype(float))
+    e2 = float((x2 * ct[hh2, jobs["o"][jj2], ss2])[ev[jj2]].sum())
+    return dict(emis_t=e / 1e6, emis_adj_t=(e2 + c_late * float(u2[ev].sum())) / 1e6,
                 late_frac=float(u[ev].sum()) / total, late_jobs=float((u[ev] > 1e-3).mean()),
                 unfinished=float(u[ev].sum()) / total,
                 mig_frac=float(x[k & (jobs["o"][jj] != ss)].sum()) / total, work=total,
@@ -505,3 +536,109 @@ def dual_range(cobj, Aub, Aeq, bub, beq, value, jobs, cap, m, win, coalition, to
                         b_ub=np.r_[cobj, -value * (1 - tol)], bounds=bounds, method="highs")
             rng[o, k] = sgn * r.fun if r.status == 0 else np.nan
     return rng
+
+
+# --------------------------------------------------------------------------
+# Scenario-based two-stage lookahead (demand-aware comparator)
+# --------------------------------------------------------------------------
+class ScenarioMPC(Policy):
+    """Two-stage stochastic lookahead with the same demand information as CARMA. At
+    each hour, K arrival scenarios for the next `look` hours are drawn from the
+    historical job traces from which CARMA's profile is estimated (the jobs of one
+    historical week at the same hours of the week). The first-hour allocation of the
+    pending real jobs is shared by all scenarios; their future allocation and the
+    scenario jobs are planned separately in each scenario, and the expected cost is
+    minimised (sample-average approximation, solved as an LP with HiGHS). Scenario
+    jobs that cannot be served incur the same soft penalty as CARMA's ghost jobs."""
+
+    def __init__(self, hist_jobs, hist_t0s, K=4, look=12, seed=0, name="Scenario-MPC", ghost_pen=None,
+                 period=168):
+        self.K, self.look, self.name, self.ghost_pen, self.period = K, look, name, ghost_pen, period
+        self.rng = np.random.default_rng(seed)
+        self.hist = []
+        for jobs, t0 in zip(hist_jobs, hist_t0s):
+            ev = jobs["ev"]
+            how = (jobs["a"][ev] - t0) % period
+            self.hist.append(dict(how=how, o=jobs["o"][ev], w=jobs["w"][ev], m=jobs["m"][ev],
+                                  win=(jobs["d"] - jobs["a"])[ev]))
+
+    def reset(self, jobs, t0):
+        self.t0 = t0
+
+    def scenario(self, i, t):
+        h = self.hist[i]
+        rel = (h["how"] - (t - self.t0)) % self.period   # arrival offset from now
+        sel = (rel >= 1) & (rel <= self.look)
+        return rel[sel], h["o"][sel], h["w"][sel], h["m"][sel], h["win"][sel]
+
+    def act(self, t, P, view):
+        import scipy.sparse as sp
+        from scipy.optimize import linprog
+        cost, cap = view["cost_fc"], view["cap"]
+        L = cost.shape[0]
+        J = len(P["rem"])
+        rwin = np.clip(P["dl"] - t, 1, L)
+        gp = self.ghost_pen if self.ghost_pen is not None else 1.5 * cost[:, np.arange(S), np.arange(S)].max()
+        scen = [self.scenario(i, t) for i in self.rng.choice(len(self.hist), self.K, replace=False)]
+        cols_c, rows, cols, vals = [], [], [], []
+        b_eq, b_ub = [], []
+        n_eq = n_ub = 0
+        eq_r, eq_c, ub_r, ub_c = [], [], [], []
+        ncol = 0
+
+        def add_cols(c):
+            nonlocal ncol
+            c = np.asarray(c, float); idx = ncol + np.arange(len(c)); ncol += len(c); cols_c.append(c)
+            return idx
+
+        # first-stage variables: real job j at site s in hour 0
+        j0 = np.repeat(np.arange(J), S); s0 = np.tile(np.arange(S), J)
+        c0 = cost[0, P["orig"][j0], s0]
+        ok0 = c0 < 1e6; j0, s0, c0 = j0[ok0], s0[ok0], c0[ok0]
+        x0 = add_cols(c0)
+        # shared hour-0 width and capacity rows
+        ub_r += [n_ub + j0, n_ub + J + s0]; ub_c += [x0, x0]
+        b_ub += [P["width"], cap[0]]; n_ub += J + S
+        for (grel, go, gw, gm, gwin) in scen:
+            G = len(gw)
+            gwin = np.minimum(gwin, L - grel)
+            gm = np.maximum(gm, gw / np.maximum(gwin, 1))
+            # real jobs, hours 1..win-1
+            rj = np.repeat(np.arange(J), np.maximum(rwin - 1, 0) * S)
+            rh = np.concatenate([np.repeat(np.arange(1, rwin[j]), S) for j in range(J)]) if J else np.zeros(0, int)
+            rs = np.tile(np.arange(S), int(np.maximum(rwin - 1, 0).sum()))
+            rc = cost[rh, P["orig"][rj], rs]
+            okr = rc < 1e6; rj, rh, rs, rc = rj[okr], rh[okr], rs[okr], rc[okr]
+            y = add_cols(rc / self.K)
+            # scenario jobs
+            gj = np.repeat(np.arange(G), gwin * S)
+            gh = np.concatenate([np.repeat(grel[g] + np.arange(gwin[g]), S) for g in range(G)]) if G else np.zeros(0, int)
+            gs = np.tile(np.arange(S), int(gwin.sum()))
+            gc = cost[gh, go[gj], gs]
+            okg = gc < 1e6; gj, gh, gs, gc = gj[okg], gh[okg], gs[okg], gc[okg]
+            z = add_cols(gc / self.K)
+            u = add_cols(np.full(J, BIG / self.K))
+            v = add_cols(np.full(G, gp / self.K))
+            # work equalities
+            eq_r += [n_eq + j0, n_eq + rj, n_eq + np.arange(J), n_eq + J + gj, n_eq + J + np.arange(G)]
+            eq_c += [x0, y, u, z, v]
+            b_eq += [P["rem"], gw]; n_eq += J + G
+            # width rows (real hours >= 1, scenario hours), capacity rows (hours >= 1)
+            wr = n_ub + rj * L + rh
+            wg = n_ub + J * L + gj * L + gh
+            ub_r += [wr, wg]; ub_c += [y, z]
+            b_ub += [np.repeat(P["width"], L), np.repeat(gm, L)]; n_ub += J * L + G * L
+            ub_r += [n_ub + rh * S + rs, n_ub + gh * S + gs]; ub_c += [y, z]
+            b_ub += [cap.ravel()]; n_ub += L * S
+        c = np.concatenate(cols_c)
+        Aeq = sp.csr_matrix((np.ones(sum(len(a) for a in eq_c)), (np.concatenate(eq_r), np.concatenate(eq_c))),
+                            shape=(n_eq, ncol))
+        Aub = sp.csr_matrix((np.ones(sum(len(a) for a in ub_c)), (np.concatenate(ub_r), np.concatenate(ub_c))),
+                            shape=(n_ub, ncol))
+        res = linprog(c, A_ub=Aub, b_ub=np.concatenate(b_ub), A_eq=Aeq, b_eq=np.concatenate(b_eq),
+                      bounds=(0, None), method="highs")
+        if res.status != 0:
+            raise RuntimeError(res.message)
+        x = np.zeros((J, S))
+        np.add.at(x, (j0, s0), res.x[x0])
+        return x
