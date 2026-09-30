@@ -35,7 +35,7 @@ python fetch_data.py                 # optional: the raw file is already include
 python prepare_trace.py              # optional: rebuilds data/traces/alibaba2018_jobs.csv.gz
                                      # from batch_task.csv of cluster-trace-v2018 (not included)
 ./run_all.sh                         # complete pipeline, see below
-cd ../manuscript && pdflatex main && bibtex main && pdflatex main && pdflatex main
+cd ../manuscript && pdflatex carma_manuscript && bibtex carma_manuscript && pdflatex carma_manuscript && pdflatex carma_manuscript
 ```
 
 `run_all.sh` runs, in order:
