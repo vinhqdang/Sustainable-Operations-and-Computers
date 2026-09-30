@@ -1,0 +1,19 @@
+{
+ "kappa": 1.25,
+ "look": 12,
+ "protect_r": 0.5,
+ "protect_tight": 1,
+ "mpc_cube": "q90",
+ "val_gap": {
+  "CARMA|0.75": 4.546,
+  "CARMA|1.0": 2.998,
+  "CARMA|1.25": 2.869,
+  "MPC": 9.093,
+  "MPC|q60": 7.769,
+  "MPC|q80": 5.704,
+  "MPC|q90": 4.856,
+  "Protect|0.2": 6.716,
+  "Protect|0.3": 6.454,
+  "Protect|0.5": 6.249
+ }
+}

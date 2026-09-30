@@ -9,6 +9,8 @@ centres: guarantees and fair carbon attribution"*, prepared for **Sustainable Op
 |---|---|
 | `data/raw/gb_regional_ci_2022_2024.csv.gz` | Half-hourly regional carbon intensity and generation mix for Great Britain, 2022-2024, from the NESO Carbon Intensity API |
 | `src/fetch_data.py` | Downloads the raw data from the API (days with missing half-hours are re-requested in one-day chunks) |
+| `src/grids_fetch.py` | Builds hourly carbon intensity for zones outside Great Britain from open generation-mix data (Energy-Charts, EIA-930, ONS Brazil, NZ Electricity Authority) into `data/raw/grids/` |
+| `src/fleets.py`, `src/fleet_run.py`, `src/fleet_analysis.py`, `src/run_fleets.sh` | Fleet definitions (Europe, United States, Brazil, four continents) and the per-fleet experiment and statistics; select a fleet with the environment variable `FLEET` |
 | `src/prepare_trace.py` | Builds the job table of the Alibaba 2018 trace from the raw batch-task table |
 | `src/common.py` | Sites, facility parameters, data splits, hourly loader |
 | `src/forecast.py` | Direct per-horizon gradient-boosted forecaster (1-24 h) and benchmarks |
@@ -63,6 +65,18 @@ starts a fresh run. Delete these files for a clean rerun.
 The results in the paper were produced on 4 cores of an Intel Xeon processor at 2.1 GHz (Linux,
 Python 3.11, single-threaded solvers). The full pipeline takes several hours; decision times
 depend on the hardware. All random seeds are fixed.
+
+## Multi-grid experiment
+
+```bash
+cd src
+python grids_fetch.py eu us br nz     # optional: the hourly intensities are already in data/raw/grids/
+./run_fleets.sh                       # forecaster, tuning and test for EU US BR GLOBAL (several hours)
+for f in EU US BR GLOBAL; do FLEET=$f python fleet_analysis.py; done
+python fleet_analysis.py all          # cross-fleet table and figure
+```
+
+Hourly carbon intensity of the additional zones is computed from the generation mix with IPCC (2014) lifecycle emission factors (production-based; see `src/grids_fetch.py`). The data come from Energy-Charts (Fraunhofer ISE), the EIA-930 hourly generation bulk file, the ONS (Brazil) open-data portal and the NZ Electricity Authority; please consult each provider's terms of use before redistribution.
 
 ## Data licence
 

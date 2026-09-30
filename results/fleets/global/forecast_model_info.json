@@ -1,0 +1,28 @@
+{
+ "fit_seconds": 72.97724223136902,
+ "n_train": 1239604,
+ "features": [
+  "site",
+  "h",
+  "y0",
+  "vol",
+  "m24",
+  "yday",
+  "lweek",
+  "gb0",
+  "wind",
+  "gas",
+  "solar",
+  "hod",
+  "dow",
+  "doy_s",
+  "doy_c",
+  "hod0",
+  "d1",
+  "d2",
+  "d3",
+  "d6",
+  "d12",
+  "d23"
+ ]
+}

@@ -34,7 +34,7 @@
             country={Vietnam}}
 
 \begin{abstract}
-Shifting deferrable jobs to cleaner hours and locations cuts data-centre emissions, but online schedulers act before future grid conditions and jobs are known. We formulate multi-site, deadline-constrained scheduling of bag-of-tasks jobs as a minimum-cost flow problem and study CARMA (Carbon-aware Anticipatory Receding-horizon Multi-site Allocation), which adds ``ghost jobs'' for expected arrivals to each hourly plan. Uncertainty about demand alone forces any online algorithm, even with perfect carbon forecasts, to a competitive ratio of $\Omega(\sqrt{\theta})$, where $\theta$ is the ratio of highest to lowest unit emission cost. Under explicit assumptions (a backstop resource, episodes within the planning window), CARMA never misses a deadline and is optimal under exact predictions; these assumptions do not hold in the weekly experiments. On 2024 regional grid data for Great Britain, CARMA comes within 8.0--9.8\% of the clairvoyant optimum, against 15.5--16.3\% for the best baseline without demand information, and cuts attributional emissions by 37--69\% relative to carbon-agnostic operation. A scenario-based stochastic lookahead with the same demand information is 0.3--1.0 points better but needs 12--37 times more computing time. On a trace-derived workload with a biased demand profile, CARMA's gap is 21.2\% against 27.5--36.8\%. Anticipating demand is worth more than perfect carbon foresight in these settings. Under a stylised marginal-emission proxy, however, achievable reductions shrink to 14\% and CARMA's edge becomes small. Dual prices of the pooled problem give a carbon attribution in the core of the hindsight pooling game, whereas origin- and host-based accounting violate coalitional stability in every week.
+Shifting deferrable jobs to cleaner times and places cuts data-centre emissions, but online schedulers act before future grid conditions and jobs are known. We formulate multi-site, deadline-constrained scheduling of bag-of-tasks jobs as a minimum-cost flow problem and study CARMA (Carbon-aware Anticipatory Receding-horizon Multi-site Allocation), which adds ``ghost jobs'' for expected arrivals to each hourly plan. Uncertainty about demand alone forces any online algorithm, even with perfect carbon forecasts, to a competitive ratio of $\Omega(\sqrt{\theta})$, where $\theta$ is the ratio of highest to lowest unit emission cost. Under explicit assumptions (a backstop resource, episodes within the planning window), CARMA never misses a deadline and is optimal under exact predictions; these assumptions do not hold in the weekly experiments. On 2024 regional grid data for Great Britain, CARMA comes within 8.0--9.8\% of the clairvoyant optimum, against 15.5--16.3\% for the best baseline without demand information. On four further fleets covering Europe, North and South America and Oceania, its gap is 2.7--5.8\% against 4.4--13.0\%. A scenario-based stochastic lookahead with the same demand information is level with CARMA or at most 1 point better, but needs 12--37 times more computing time. A trace-derived workload with a biased demand profile gives 21.2\% against 27.5\%. Under a stylised marginal-emission proxy, however, achievable reductions shrink to 14\% and CARMA's edge becomes small. Dual prices of the pooled problem give a carbon attribution in the core of the hindsight pooling game, whereas origin- and host-based accounting violate coalitional stability in every week.
 \end{abstract}
 
 \begin{keyword}
@@ -61,7 +61,7 @@ The author declares no known competing financial interests or personal relations
 This research did not receive any specific grant from funding agencies in the public, commercial, or not-for-profit sectors.
 
 \section*{Data availability}
-The carbon-intensity data are publicly available from the NESO Carbon Intensity API~\cite{nesoapi} under the CC BY 4.0 licence. The data snapshot used in this study, all code, the workload generator with fixed random seeds, and all raw experiment outputs are available from the author's repository (\url{https://github.com/vinhqdang/Sustainable-Operations-and-Computers}).
+The carbon-intensity data are publicly available from the NESO Carbon Intensity API~\cite{nesoapi} under the CC BY 4.0 licence. The generation-mix data of the additional grids are publicly available from Energy-Charts, the EIA-930 bulk files, the ONS open-data portal and the New Zealand Electricity Authority. The data snapshot used in this study, all code, the workload generator with fixed random seeds, and all raw experiment outputs are available from the author's repository (\url{https://github.com/vinhqdang/Sustainable-Operations-and-Computers}).
 
 \appendix
 \setcounter{figure}{0}\setcounter{table}{0}
@@ -71,6 +71,7 @@ The carbon-intensity data are publicly available from the NESO Carbon Intensity 
 \input{appendix_proofs.tex}
 \input{appendix_forecast.tex}
 \input{appendix_thm2.tex}
+\input{appendix_multigrid.tex}
 
 \bibliographystyle{elsarticle-num}
 \bibliography{references}
