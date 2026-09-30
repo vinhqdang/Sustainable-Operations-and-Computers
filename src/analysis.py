@@ -3,7 +3,8 @@
 Statistics: each (week, load, regime) cell has 3 independent workload traces; tests
 use week-level means (52 paired weeks). The estimand is the mean paired difference of
 the gap to the oracle between a policy and CARMA. Confidence intervals and two-sided
-p-values come from a moving-block bootstrap over weeks (block length 4, 5000 draws),
+p-values come from a moving-block bootstrap over weeks (block length 4; 5000 draws
+for intervals, 100000 for p-values, so that Holm-adjusted p-values can fall below 0.001),
 which respects the serial correlation of consecutive weeks; the p-value is the share
 of bootstrap means of the centred series at least as far from zero as the observed
 mean. p-values are Holm-adjusted jointly over all comparisons of the main experiment
@@ -50,7 +51,7 @@ def block_boot(x, B=5000, block=4, seed=0):
     return np.percentile(m, [2.5, 97.5])
 
 
-def block_boot_p(x, B=5000, block=4, seed=1):
+def block_boot_p(x, B=100000, block=4, seed=1):
     """Two-sided moving-block bootstrap p-value for H0: mean = 0."""
     x = np.asarray(x, float)
     if np.allclose(x, 0):
@@ -126,7 +127,8 @@ def latex_main(tab):
                 if abs(r.gap - best) < 1e-9:
                     gap = r"\textbf{" + gap + "}"
                 mig = f" & {r.mig:.1f}" if regime else ""
-                lines.append(f"{lab} & {r.policy} & {r.emis:.2f} & {r.red:.1f} & {gap} & {r.gap_adj:.1f} & {r.late:.2f}{mig} & {fmt_p(r.p)}\\\\")
+                ms = "--" if pd.isna(r.ms) else (f"{r.ms:.0f}" if r.ms >= 10 else f"{r.ms:.1f}")
+                lines.append(f"{lab} & {r.policy} & {r.emis:.2f} & {r.red:.1f} & {gap} & {r.gap_adj:.1f} & {r.late:.2f}{mig} & {ms} & {fmt_p(r.p)}\\\\")
             lines.append(r"\addlinespace")
         open(RES / fn, "w").write("\n".join(lines[:-1]))
 
@@ -244,7 +246,8 @@ def latex_sens(st):
 def latex_trace(tt):
     lines = []
     for r in tt.itertuples():
-        lines.append(f"{r.policy} & {r.emis:.2f} & {r.red:.1f} & {r.gap:.1f} & {r.late:.2f} & {r.mig:.1f} & {fmt_p(r.p)}\\\\")
+        ms = "--" if pd.isna(r.ms) else (f"{r.ms:.0f}" if r.ms >= 10 else f"{r.ms:.1f}")
+        lines.append(f"{r.policy} & {r.emis:.2f} & {r.red:.1f} & {r.gap:.1f} & {r.late:.2f} & {r.mig:.1f} & {ms} & {fmt_p(r.p)}\\\\")
     open(RES / "table_trace.tex", "w").write("\n".join(lines))
 
 
