@@ -62,6 +62,9 @@ def block_boot_p(x, B=100000, block=4, seed=1):
 
 
 def add_rel(d):
+    if "idle_t" in d:  # always-on servers: idle energy is part of every schedule's emissions
+        idle = d.idle_t.fillna(0.0)
+        d = d.assign(emis_t=d.emis_t + idle, emis_adj_t=d.emis_adj_t + idle)
     base = d[d.label == "ASAP-Local"][KEY + ["emis_t"]].rename(columns={"emis_t": "base"})
     orc = d[d.label == "Oracle"][KEY + ["emis_t", "emis_adj_t"]].rename(columns={"emis_t": "orc", "emis_adj_t": "orc_adj"})
     d = d.merge(base, on=KEY).merge(orc, on=KEY)
